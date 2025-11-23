@@ -1,66 +1,60 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+import Link from "next/link";
+import Navbar from "@/components/Navbar";
 
 export default function Home() {
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>To get started, edit the page.js file.</h1>
+    <main>
+      <Navbar />
+
+      <div className="container">
+        <section className="hero">
+          <h1>
+            Empowering TAFE Educators with <br />
+            <span className="text-gradient">Intelligent Content Generation</span>
+          </h1>
           <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
+            Streamline your curriculum development. Generate compliant workbooks,
+            assessments, and slides in minutes, not days.
           </p>
-        </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+            <Link href="/workbook" className="btn btn-primary">
+              Start a Workbook
+            </Link>
+            <a href="#features" className="btn" style={{ background: 'var(--input)' }}>
+              Learn More
+            </a>
+          </div>
+        </section>
+
+        <section id="features" className="grid-3" style={{ padding: '4rem 0' }}>
+          <Link href="/workbook" className="card card-hover">
+            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🧾</div>
+            <h2 style={{ marginBottom: '0.5rem' }}>Generate Workbook</h2>
+            <p style={{ color: '#64748b' }}>
+              Enter a TAFE unit URL and upload resources to create a structured,
+              compliant learner workbook with automated TOC.
+            </p>
+          </Link>
+
+          <Link href="/assessment" className="card card-hover">
+            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🧠</div>
+            <h2 style={{ marginBottom: '0.5rem' }}>Generate Assessment</h2>
+            <p style={{ color: '#64748b' }}>
+              Upload a workbook to automatically generate mapped MCQs and
+              short-answer questions with marking guides.
+            </p>
+          </Link>
+
+          <Link href="/slides" className="card card-hover">
+            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎓</div>
+            <h2 style={{ marginBottom: '0.5rem' }}>Generate Slides</h2>
+            <p style={{ color: '#64748b' }}>
+              Turn your teaching materials into a visual slide deck outline,
+              ready for the classroom.
+            </p>
+          </Link>
+        </section>
+      </div>
+    </main>
   );
 }
