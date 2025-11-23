@@ -3,21 +3,21 @@
 import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 
+const thinkingSteps = [
+    "Reading workbook templates...",
+    "Analyzing unit requirements...",
+    "Drafting content for Chapter 1...",
+    "Structuring learning activities...",
+    "Refining tone and style...",
+    "Finalizing workbook..."
+];
+
 export default function WorkbookPage() {
     const [url, setUrl] = useState("");
     const [files, setFiles] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const [toc, setToc] = useState(null);
     const [thinkingStep, setThinkingStep] = useState("");
-
-    const thinkingSteps = [
-        "Reading workbook templates...",
-        "Analyzing unit requirements...",
-        "Drafting content for Chapter 1...",
-        "Structuring learning activities...",
-        "Refining tone and style...",
-        "Finalizing workbook..."
-    ];
 
     useEffect(() => {
         let interval;

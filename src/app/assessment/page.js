@@ -3,6 +3,15 @@
 import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 
+const thinkingSteps = [
+    "Analyzing unit competency standards...",
+    "Designing multiple-choice questions...",
+    "Formulating short answer scenarios...",
+    "Creating marking guides and model answers...",
+    "Reviewing assessment validity...",
+    "Finalizing assessment document..."
+];
+
 export default function AssessmentPage() {
     const [files, setFiles] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -10,15 +19,6 @@ export default function AssessmentPage() {
     const [thinkingStep, setThinkingStep] = useState("");
     const [downloadingAnswers, setDownloadingAnswers] = useState(false);
     const [downloadingStudent, setDownloadingStudent] = useState(false);
-
-    const thinkingSteps = [
-        "Analyzing unit competency standards...",
-        "Designing multiple-choice questions...",
-        "Formulating short answer scenarios...",
-        "Creating marking guides and model answers...",
-        "Reviewing assessment validity...",
-        "Finalizing assessment document..."
-    ];
 
     useEffect(() => {
         let interval;

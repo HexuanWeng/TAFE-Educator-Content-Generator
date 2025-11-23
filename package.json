@@ -12,6 +12,7 @@
     "@google/generative-ai": "^0.24.1",
     "cheerio": "^1.1.2",
     "docx": "^9.5.1",
+    "googleapis": "^166.0.0",
     "mammoth": "^1.11.0",
     "next": "16.0.3",
     "pptxgenjs": "^4.0.1",
