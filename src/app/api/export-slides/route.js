@@ -4,7 +4,7 @@ import { createPresentation } from '@/lib/googleSlides';
 
 export async function POST(request) {
     try {
-        const { slides, theme } = await request.json();
+        const { slides, theme, design, images } = await request.json();
 
         // Check if Google Credentials are available
         if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY) {
@@ -19,10 +19,6 @@ export async function POST(request) {
                 }, { responseType: 'arraybuffer' });
 
                 const buffer = Buffer.from(exportResponse.data);
-
-                // Optional: Delete the temp file from Drive to avoid clutter? 
-                // For now, let's keep it as a record or maybe we want to return the link later.
-                // await driveService.files.delete({ fileId: presentationId });
 
                 return new NextResponse(buffer, {
                     headers: {
@@ -41,8 +37,8 @@ export async function POST(request) {
         const pptx = new PptxGenJS();
         pptx.layout = 'LAYOUT_16x9';
 
-        // Define theme colors or defaults
-        const colors = theme?.colors || {
+        // Define theme colors or defaults (use design theme if available)
+        const colors = (design?.theme || theme?.colors) || {
             primary: '0F766E',
             secondary: '0F172A',
             accent: 'F59E0B',
@@ -52,11 +48,11 @@ export async function POST(request) {
         };
 
         // Define theme fonts or defaults
-        const headingFont = theme?.fonts?.heading.split(',')[0].replace(/['"]/g, '') || 'Arial';
-        const bodyFont = theme?.fonts?.body.split(',')[0].replace(/['"]/g, '') || 'Arial';
+        const headingFont = (design?.theme?.fonts?.heading || theme?.fonts?.heading || 'Arial').split(',')[0].replace(/['"]/g, '');
+        const bodyFont = (design?.theme?.fonts?.body || theme?.fonts?.body || 'Arial').split(',')[0].replace(/['"]/g, '');
 
         // Helper to strip # from hex codes for PptxGenJS
-        const c = (hex) => hex.replace('#', '');
+        const c = (hex) => hex ? hex.replace('#', '') : '000000';
 
         // Set Master Slide with Theme Background
         pptx.defineSlideMaster({
@@ -91,6 +87,9 @@ export async function POST(request) {
         slides.slides.forEach((s, i) => {
             slide = pptx.addSlide({ masterName: 'MASTER_SLIDE' });
 
+            // Get layout from design specs if available
+            const layout = design?.slideDesigns?.[i]?.layout || 'default';
+
             // Slide Title
             slide.addText(s.title, {
                 x: 0.5, y: 0.5, w: '90%', h: 0.8,
@@ -106,6 +105,23 @@ export async function POST(request) {
             });
 
             // Content Body
+            let contentX = 0.5;
+            let contentW = '60%';
+            let visualX = 6.8;
+            let visualW = '30%';
+
+            // Adjust layout based on Nano Banana Pro specs
+            if (layout === 'split-right') {
+                contentX = 0.5; contentW = '50%';
+                visualX = 5.8; visualW = '40%';
+            } else if (layout === 'split-left') {
+                contentX = 5.0; contentW = '50%';
+                visualX = 0.5; visualW = '40%';
+            } else if (layout === 'centered-hero') {
+                contentX = 1.5; contentW = '70%';
+                visualX = 1.5; visualW = '70%'; // Visual below content
+            }
+
             if (s.content && Array.isArray(s.content)) {
                 // Detailed Content Mode
                 const contentText = s.content.map(p => ({
@@ -120,7 +136,7 @@ export async function POST(request) {
                 }));
 
                 slide.addText(contentText, {
-                    x: 0.5, y: 1.5, w: '60%', h: 5,
+                    x: contentX, y: 1.5, w: contentW, h: 5,
                     valign: 'top'
                 });
             } else {
@@ -137,7 +153,7 @@ export async function POST(request) {
                 }));
 
                 slide.addText(bullets, {
-                    x: 0.5, y: 1.5, w: '60%', h: 5,
+                    x: contentX, y: 1.5, w: contentW, h: 5,
                     lineSpacing: 32, valign: 'top'
                 });
             }
@@ -148,13 +164,34 @@ export async function POST(request) {
             }
 
             // Infographic Placeholder
-            if (s.infographic) {
+            // Infographic / Image
+            const visualY = layout === 'centered-hero' ? 5.0 : 1.5;
+            const visualH = layout === 'centered-hero' ? 2.0 : 4.0;
+
+            if (images && images[i]) {
+                // Embed the generated image
+                slide.addImage({
+                    path: images[i],
+                    x: visualX,
+                    y: visualY,
+                    w: visualW,
+                    h: visualH,
+                    sizing: { type: 'cover', w: visualW, h: visualH }
+                });
+            } else if (s.infographic) {
+                // Fallback to text placeholder if no image
                 slide.addText("Visual Suggestion:", {
-                    x: 6.8, y: 1.5, w: '30%', h: 0.5,
+                    x: visualX, y: visualY, w: visualW, h: 0.5,
                     fontSize: 14, bold: true, color: c(colors.secondary), fontFace: bodyFont
                 });
-                slide.addText(s.infographic, {
-                    x: 6.8, y: 2.0, w: '30%', h: 4,
+
+                let visualText = s.infographic;
+                if (design?.slideDesigns?.[i]?.visualNotes) {
+                    visualText += `\n\n[Nano Banana Pro]: ${design.slideDesigns[i].visualNotes}`;
+                }
+
+                slide.addText(visualText, {
+                    x: visualX, y: visualY + 0.5, w: visualW, h: visualH,
                     fontSize: 12, color: c(colors.text),
                     shape: pptx.ShapeType.rect,
                     fill: { color: c(colors.background), transparency: 50 },
@@ -181,3 +218,4 @@ export async function POST(request) {
         );
     }
 }
+

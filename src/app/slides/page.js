@@ -254,6 +254,19 @@ const themes = [
             slideBg: '#FFFFFF'
         },
         fonts: { heading: 'Arial, sans-serif', body: 'Arial, sans-serif' }
+    },
+    {
+        id: 'australian-energy',
+        name: 'Australian Energy',
+        colors: {
+            primary: '#158158', // Dark Green
+            secondary: '#000000', // Black
+            accent: '#058DC7', // Blue
+            background: '#FFFFFF',
+            text: '#334155',
+            slideBg: '#FFFFFF'
+        },
+        fonts: { heading: 'Arial, sans-serif', body: 'Arial, sans-serif' }
     }
 ];
 
@@ -361,6 +374,41 @@ export default function SlidesPage() {
     };
 
     const [finalSlides, setFinalSlides] = useState(null);
+    const [designSpecs, setDesignSpecs] = useState(null);
+    const [slideImages, setSlideImages] = useState(null);
+    const [isDesigning, setIsDesigning] = useState(false);
+
+    const handleDesignEnhance = async () => {
+        setIsDesigning(true);
+        try {
+            // 1. Get Design Specs
+            const resSpecs = await fetch('/api/enhance-design', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ slides: finalSlides, currentTheme: selectedTheme })
+            });
+
+            if (!resSpecs.ok) throw new Error("Design enhancement failed");
+            const specsData = await resSpecs.json();
+            setDesignSpecs(specsData);
+
+            // 2. Generate Images based on specs
+            const resImages = await fetch('/api/generate-images', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ designSpecs: specsData })
+            });
+
+            if (!resImages.ok) throw new Error("Image generation failed");
+            const imagesData = await resImages.json();
+            setSlideImages(imagesData.images);
+
+        } catch (err) {
+            alert("Error: " + err.message);
+        } finally {
+            setIsDesigning(false);
+        }
+    };
 
     const handleFinalGenerate = async () => {
         setIsLoading(true);
@@ -388,7 +436,12 @@ export default function SlidesPage() {
             const res = await fetch('/api/export-slides', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ slides: finalSlides || slides, theme: selectedTheme })
+                body: JSON.stringify({
+                    slides: finalSlides || slides,
+                    theme: designSpecs?.theme || selectedTheme,
+                    design: designSpecs,
+                    images: slideImages
+                })
             });
 
             if (!res.ok) throw new Error("Export failed");
@@ -659,13 +712,65 @@ export default function SlidesPage() {
                     }
                 `}</style>
 
+                <style jsx>{`
+                    .magic-btn {
+                        background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+                        color: white;
+                        border: none;
+                        transition: all 0.3s ease;
+                    }
+                    .magic-btn:hover {
+                        opacity: 0.9;
+                        transform: translateY(-1px);
+                        box-shadow: 0 4px 12px rgba(168, 85, 247, 0.4);
+                    }
+                `}</style>
+
                 {view === 'final_review' && finalSlides && (
                     <div className="card">
-                        <div style={{ marginBottom: '2rem' }}>
-                            <h2>Final Presentation Review</h2>
-                            <p style={{ color: '#64748b', marginTop: '0.5rem' }}>
-                                Review the detailed content before downloading.
-                            </p>
+                        <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                            <div>
+                                <h2>Final Presentation Review</h2>
+                                <p style={{ color: '#64748b', marginTop: '0.5rem' }}>
+                                    Review the detailed content before downloading.
+                                </p>
+                            </div>
+
+                            {!designSpecs ? (
+                                <button
+                                    className="btn magic-btn"
+                                    onClick={handleDesignEnhance}
+                                    disabled={isDesigning}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.5rem' }}
+                                >
+                                    {isDesigning ? (
+                                        <>
+                                            <span className="spinner"></span>
+                                            Designing...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span>✨</span>
+                                            Magic Design with Nano Banana Pro
+                                        </>
+                                    )}
+                                </button>
+                            ) : (
+                                <div style={{
+                                    background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+                                    color: '#166534',
+                                    padding: '0.75rem 1.5rem',
+                                    borderRadius: 'var(--radius)',
+                                    border: '1px solid #bbf7d0',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem',
+                                    fontWeight: '600'
+                                }}>
+                                    <span>✓</span>
+                                    {designSpecs.designName || "Design Enhanced"}
+                                </div>
+                            )}
                         </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', marginBottom: '2rem' }}>
@@ -680,9 +785,24 @@ export default function SlidesPage() {
                                         padding: '1rem',
                                         background: '#f8fafc',
                                         borderBottom: '1px solid var(--border)',
-                                        fontWeight: 'bold'
+                                        fontWeight: 'bold',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center'
                                     }}>
-                                        Slide {i + 1}: {slide.title}
+                                        <span>Slide {i + 1}: {slide.title}</span>
+                                        {designSpecs && designSpecs.slideDesigns && designSpecs.slideDesigns[i] && (
+                                            <span style={{
+                                                fontSize: '0.75rem',
+                                                background: '#f3e8ff',
+                                                color: '#7e22ce',
+                                                padding: '0.25rem 0.5rem',
+                                                borderRadius: '999px',
+                                                border: '1px solid #d8b4fe'
+                                            }}>
+                                                Layout: {designSpecs.slideDesigns[i].layout}
+                                            </span>
+                                        )}
                                     </div>
                                     <div style={{ padding: '1.5rem' }}>
                                         <div style={{ marginBottom: '1.5rem' }}>
@@ -706,6 +826,26 @@ export default function SlidesPage() {
                                             <div style={{ padding: '1rem', background: '#f0f9ff', borderRadius: 'var(--radius)', fontSize: '0.9rem', color: '#0369a1' }}>
                                                 {slide.infographic}
                                             </div>
+                                            {designSpecs && designSpecs.slideDesigns && designSpecs.slideDesigns[i] && (
+                                                <div style={{ marginTop: '0.5rem', padding: '1rem', background: '#fdf4ff', borderRadius: 'var(--radius)', fontSize: '0.9rem', color: '#86198f', border: '1px dashed #d8b4fe' }}>
+                                                    <strong>Nano Banana Pro Suggestion:</strong> {designSpecs.slideDesigns[i].visualNotes}
+                                                </div>
+                                            )}
+                                            {slideImages && slideImages[i] && (
+                                                <div style={{ marginTop: '1rem' }}>
+                                                    <img
+                                                        src={slideImages[i]}
+                                                        alt="Generated visual"
+                                                        style={{
+                                                            width: '100%',
+                                                            maxHeight: '300px',
+                                                            objectFit: 'cover',
+                                                            borderRadius: 'var(--radius)',
+                                                            border: '1px solid var(--border)'
+                                                        }}
+                                                    />
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

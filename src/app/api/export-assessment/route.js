@@ -64,6 +64,7 @@ export async function POST(request) {
             // Handle both string (old format) and object (new format) for backward compatibility
             const questionText = typeof q === 'string' ? q : q.question;
             const answerText = typeof q === 'string' ? "" : q.answer;
+            const notesText = q.notes || "";
 
             children.push(
                 new Paragraph({
@@ -73,24 +74,51 @@ export async function POST(request) {
                 })
             );
 
-            if (includeAnswers && answerText) {
-                children.push(
-                    new Paragraph({
-                        children: [
-                            new TextRun({
-                                text: "Model Answer: ",
-                                bold: true,
-                                color: "00008B"
-                            }),
-                            new TextRun({
-                                text: answerText,
-                                color: "00008B"
-                            })
-                        ],
-                        spacing: { after: 400 },
-                        indent: { left: 720 }
-                    })
-                );
+            if (includeAnswers) {
+                if (answerText) {
+                    children.push(
+                        new Paragraph({
+                            children: [
+                                new TextRun({
+                                    text: "Model Answer: ",
+                                    bold: true,
+                                    color: "00008B"
+                                }),
+                                new TextRun({
+                                    text: answerText,
+                                    color: "00008B"
+                                })
+                            ],
+                            spacing: { after: 200 },
+                            indent: { left: 720 }
+                        })
+                    );
+                }
+
+                if (notesText) {
+                    children.push(
+                        new Paragraph({
+                            children: [
+                                new TextRun({
+                                    text: "Notes: ",
+                                    bold: true,
+                                    color: "555555"
+                                }),
+                                new TextRun({
+                                    text: notesText,
+                                    italics: true,
+                                    color: "555555"
+                                })
+                            ],
+                            spacing: { after: 400 },
+                            indent: { left: 720 }
+                        })
+                    );
+                } else {
+                    // Just some spacing if no notes
+                    children.push(new Paragraph({ spacing: { after: 400 } }));
+                }
+
             } else {
                 // Add space for answer if not assessor guide
                 children.push(

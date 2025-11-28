@@ -285,38 +285,65 @@ export default function WorkbookPage() {
                                 onClick={async () => {
                                     setIsLoading(true);
                                     try {
-                                        // Generate Content
-                                        const genRes = await fetch('/api/generate', {
-                                            method: 'POST',
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({ toc, unitData: {} }) // Pass unitData if stored
-                                        });
-                                        const genData = await genRes.json();
+                                        const generatedChapters = [];
+
+                                        // Iterative Agentic Generation
+                                        for (let i = 0; i < toc.chapters.length; i++) {
+                                            const chapterTitle = toc.chapters[i];
+                                            setThinkingStep(`Agent working on Chapter ${i + 1}: ${chapterTitle}...`);
+
+                                            // Call the Workbook Content Agent
+                                            const res = await fetch('/api/generate-chapter', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({
+                                                    chapterTitle,
+                                                    unitTitle: toc.title,
+                                                    unitCode: url.split('/').pop() // Rough extraction of code
+                                                })
+                                            });
+
+                                            if (!res.ok) throw new Error(`Failed to generate chapter: ${chapterTitle}`);
+
+                                            const data = await res.json();
+                                            generatedChapters.push({
+                                                title: chapterTitle,
+                                                content: data.content
+                                            });
+                                        }
+
+                                        setThinkingStep("Compiling final workbook...");
+
+                                        const fullWorkbook = {
+                                            title: toc.title,
+                                            chapters: generatedChapters
+                                        };
 
                                         // Export to DOCX
                                         const exportRes = await fetch('/api/export', {
                                             method: 'POST',
                                             headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({ workbook: genData.workbook })
+                                            body: JSON.stringify({ workbook: fullWorkbook })
                                         });
 
                                         if (!exportRes.ok) throw new Error("Export failed");
 
                                         const blob = await exportRes.blob();
-                                        const url = window.URL.createObjectURL(blob);
+                                        const urlObj = window.URL.createObjectURL(blob);
                                         const a = document.createElement('a');
-                                        a.href = url;
+                                        a.href = urlObj;
                                         a.download = `${toc.title.replace(/[^a-z0-9]/gi, '_')}.docx`;
                                         document.body.appendChild(a);
                                         a.click();
-                                        window.URL.revokeObjectURL(url);
+                                        window.URL.revokeObjectURL(urlObj);
                                         document.body.removeChild(a);
 
-                                        alert("Workbook generated and downloaded!");
+                                        alert("Workbook generated and downloaded! The agent has included detailed Australian examples.");
                                     } catch (err) {
                                         alert("Error: " + err.message);
                                     } finally {
                                         setIsLoading(false);
+                                        setThinkingStep("");
                                     }
                                 }}
                                 disabled={isLoading}

@@ -162,6 +162,17 @@ export default function AssessmentPage() {
                                         )}
                                         <textarea
                                             placeholder="Notes..."
+                                            value={q.notes || ''}
+                                            onChange={(e) => {
+                                                const newAssessment = { ...assessment };
+                                                // Handle both string and object formats for safety, though we expect objects now
+                                                if (typeof newAssessment.shortAnswer[i] === 'string') {
+                                                    newAssessment.shortAnswer[i] = { question: newAssessment.shortAnswer[i], answer: "", notes: e.target.value };
+                                                } else {
+                                                    newAssessment.shortAnswer[i].notes = e.target.value;
+                                                }
+                                                setAssessment(newAssessment);
+                                            }}
                                             style={{ width: '100%', padding: '0.5rem', marginTop: '0.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}
                                             rows={2}
                                         />
