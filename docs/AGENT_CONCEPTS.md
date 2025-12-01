@@ -16,14 +16,15 @@ This document provides a quick reference for all AI agent concepts demonstrated 
 | 4 | **Tools** | Custom Tools | ✅ | Web scraping with Cheerio for training.gov.au |
 | 5 | **Tools** | Built-in Tools | ✅ | Google Gemini 3.0 Pro for content generation |
 | 6 | **Tools** | Document Processing | ✅ | Mammoth for DOCX parsing, docx/pptxgenjs for export |
-| 7 | **Sessions & State** | In-Memory State | ✅ | React state management + API context passing |
-| 8 | **Sessions & State** | Checkpointing | ✅ | Human-in-the-loop review at 3 critical points |
-| 9 | **Context Engineering** | RAG Implementation | ✅ | Template files as context sources |
-| 10 | **Context Engineering** | Context Compaction | ✅ | Structured prompts for efficient token usage |
-| 11 | **Context Engineering** | Dynamic Context | ✅ | Real-time data from training.gov.au |
-| 12 | **Observability** | Logging | ✅ | Console logging throughout all agents |
-| 13 | **Observability** | Progress Tracking | ✅ | Real-time status updates to users |
-| 14 | **Observability** | Error Handling | ✅ | Comprehensive error logging and user feedback |
+| 7 | **Tools** | MCP Integration | ✅ | Model Context Protocol server for document-grounded generation |
+| 8 | **Sessions & State** | In-Memory State | ✅ | React state management + API context passing |
+| 9 | **Sessions & State** | Checkpointing | ✅ | Human-in-the-loop review at 3 critical points |
+| 10 | **Context Engineering** | RAG Implementation | ✅ | Template files as context sources |
+| 11 | **Context Engineering** | Context Compaction | ✅ | Structured prompts for efficient token usage |
+| 12 | **Context Engineering** | Dynamic Context | ✅ | Real-time data from training.gov.au |
+| 13 | **Observability** | Logging | ✅ | Console logging throughout all agents |
+| 14 | **Observability** | Progress Tracking | ✅ | Real-time status updates to users |
+| 15 | **Observability** | Error Handling | ✅ | Comprehensive error logging and user feedback |
 
 ---
 
@@ -398,6 +399,7 @@ try {
 - ✅ Custom tools (Cheerio web scraper)
 - ✅ Built-in tools (Google Gemini AI)
 - ✅ Document processing (Mammoth, docx, pptxgenjs)
+- ✅ MCP integration (Model Context Protocol server)
 
 ### Sessions & Memory (75% Coverage)
 - ✅ State management (React state + API context)
@@ -440,6 +442,7 @@ try {
 ## 📚 Further Reading
 
 - [Full Deployment Guide](./DEPLOYMENT.md)
+- [MCP Usage Guide](./MCP_GUIDE.md)
 - [Main Documentation](../README.md)
 - [API Documentation](../README.md#-api-documentation)
 - [Architecture Details](../README.md#-architecture)

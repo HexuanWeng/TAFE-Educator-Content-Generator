@@ -33,6 +33,7 @@ TAFE GEN demonstrates the following key concepts from advanced AI agent developm
 - **Custom Tools** - Web scraping integration for training.gov.au
 - **Built-in Tools** - Google Gemini AI for content generation
 - **External APIs** - Integration with government training databases
+- **MCP Server** - Model Context Protocol for document-grounded generation
 
 ### 3. Sessions & State Management ✓
 - **In-Memory State** - React state management for user sessions
@@ -1042,6 +1043,7 @@ GEMINI_API_KEY=your_api_key_here
 ### Documentation
 
 - [Main README](../README.md) - Complete project documentation
+- [MCP Guide](./MCP_GUIDE.md) - Model Context Protocol usage
 - [Examples](../examples/README.md) - Template files documentation
 - [Scripts](../scripts/README.md) - Development utilities
 

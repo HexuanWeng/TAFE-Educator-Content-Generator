@@ -416,6 +416,25 @@ graph TD
 ### External Services
 - **AI API:** Google Generative AI SDK (@google/generative-ai 0.24.1)
 - **Data Source:** training.gov.au (National Training Register)
+- **MCP Server:** Model Context Protocol for document-grounded slide generation
+
+### MCP Integration
+
+TAFE GEN uses a local **Model Context Protocol (MCP)** server for advanced slide generation capabilities. The MCP server enables:
+
+- **Document-grounded generation** - Slides based on actual uploaded content
+- **Reduced hallucination** - AI grounded in real documents
+- **Extensible tools** - Easy to add custom capabilities
+- **Standardized communication** - Protocol-based tool interactions
+
+📘 **For complete MCP setup and usage:** See [docs/MCP_GUIDE.md](./docs/MCP_GUIDE.md)
+
+**Quick Start MCP Server:**
+```bash
+cd mcp-server
+pip install -r requirements.txt
+python server.py
+```
 
 ---
 

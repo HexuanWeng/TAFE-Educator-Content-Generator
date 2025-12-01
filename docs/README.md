@@ -4,15 +4,27 @@ This directory contains additional documentation for TAFE GEN.
 
 ## Files
 
-### 📘 INSTRUCTIONS.md
-Detailed setup instructions for the NotebookLM MCP (Model Context Protocol) integration.
+### 📘 [INSTRUCTIONS.md](./INSTRUCTIONS.md)
+Quick start guide for NotebookLM MCP integration.
 
 **Contents:**
-- MCP server setup guide
+- Basic MCP server setup
 - Python dependencies installation
-- NotebookLM configuration
-- Usage instructions for slide generation
-- Troubleshooting tips
+- Quick usage instructions
+
+### 🔌 [MCP_GUIDE.md](./MCP_GUIDE.md)
+Comprehensive Model Context Protocol (MCP) usage guide.
+
+**Contents:**
+- What is MCP and why use it
+- Architecture overview and system design
+- Complete setup instructions
+- Using MCP for slide generation
+- MCP Server API reference
+- Extending MCP with custom tools
+- Troubleshooting common issues
+- Advanced configuration and deployment
+- Production deployment strategies
 
 ## Core Documentation
 
@@ -46,6 +58,7 @@ Quick reference for AI agent concepts demonstrated in TAFE GEN:
 - [Architecture](../README.md#-architecture) - System architecture overview
 - [Deployment Guide](./DEPLOYMENT.md) - Production deployment steps
 - [Agent Concepts](./AGENT_CONCEPTS.md) - AI agent patterns reference
+- [MCP Guide](./MCP_GUIDE.md) - Model Context Protocol usage
 
 ## Contributing Documentation
 
