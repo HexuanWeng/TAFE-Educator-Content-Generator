@@ -541,6 +541,25 @@ export default function SlidesPage() {
 
                 {view === 'edit' && slides && (
                     <div className="card">
+                        {slides.warning && (
+                            <div style={{
+                                padding: '1rem',
+                                background: '#fff3cd',
+                                borderRadius: 'var(--radius)',
+                                color: '#856404',
+                                marginBottom: '1.5rem',
+                                borderLeft: '4px solid #ffc107'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                                    <span style={{ fontSize: '1.5rem' }}>⚠️</span>
+                                    <div>
+                                        <strong style={{ display: 'block', marginBottom: '0.25rem' }}>Using Basic Slide Structure</strong>
+                                        <p style={{ margin: '0', fontSize: '0.9rem' }}>{slides.warning}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                             <div>
                                 <h2>Edit Slide Deck</h2>

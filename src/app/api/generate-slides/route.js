@@ -55,15 +55,34 @@ export async function POST(request) {
   } catch (error) {
     console.error('Slide generation error:', error);
 
-    // If MCP server is unavailable, provide helpful error
+    // If MCP server is unavailable, use fallback generation
     if (error.message.includes('ECONNREFUSED') || error.message.includes('fetch failed')) {
-      return NextResponse.json(
-        {
-          error: 'MCP server is not running. Please start it with: cd mcp-server && python server.py',
-          details: error.message
-        },
-        { status: 503 }
-      );
+      console.warn('⚠️ MCP server not available, using fallback slide generation');
+      
+      const formData = await request.formData();
+      const topic = formData.get('topic') || 'TAFE Unit Presentation';
+      const slideCount = parseInt(formData.get('slideCount') || '12');
+      
+      // Fallback: Generate basic slide structure
+      const slides = [];
+      for (let i = 1; i <= slideCount; i++) {
+        slides.push({
+          title: `Slide ${i}: ${i === 1 ? 'Introduction' : i === slideCount ? 'Summary' : `Section ${i - 1}`}`,
+          points: [
+            `Key concept ${i}.1`,
+            `Important detail ${i}.2`,
+            `Practical application ${i}.3`
+          ],
+          infographic: `Visual representation for slide ${i}`
+        });
+      }
+      
+      return NextResponse.json({
+        title: topic,
+        slides: slides,
+        fallback: true,
+        warning: 'Generated with basic structure. For document-based slides, start MCP server: cd mcp-server && python3 server.py'
+      });
     }
 
     return NextResponse.json(
