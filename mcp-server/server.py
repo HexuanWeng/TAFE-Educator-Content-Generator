@@ -103,7 +103,7 @@ def generate_slides(topic: str, document_path: str, slide_count: int, theme: str
     # Use Gemini AI if available and we have content
     if GEMINI_API_KEY and document_content:
         try:
-            model = genai.GenerativeModel('gemini-pro')
+            model = genai.GenerativeModel('gemini-3-pro-preview')
             
             prompt = f"""You are an expert TAFE (Technical and Further Education) curriculum developer.
 
@@ -207,7 +207,7 @@ def generate_mindmap(topic: str, document_path: str):
     # Use Gemini AI if available and we have content
     if GEMINI_API_KEY and document_content:
         try:
-            model = genai.GenerativeModel('gemini-pro')
+            model = genai.GenerativeModel('gemini-3-pro-preview')
             
             prompt = f"""Create a hierarchical mind map from this content about "{topic}".
 
