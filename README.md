@@ -10,20 +10,155 @@
 
 ## 📋 Table of Contents
 
+- [Getting Started](#-getting-started)
+- [Environment Setup](#-environment-setup)
+- [Usage Guide](#-usage-guide)
 - [The Problem](#-the-problem)
 - [The Solution](#-the-solution)
 - [Why Agents?](#-why-agents)
 - [Architecture](#-architecture)
 - [Key Features](#-key-features)
 - [Tech Stack](#-tech-stack)
-- [Getting Started](#-getting-started)
-- [Environment Setup](#-environment-setup)
-- [Usage Guide](#-usage-guide)
 - [API Documentation](#-api-documentation)
 - [Project Structure](#-project-structure)
 - [Value Proposition](#-value-proposition)
 - [Deployment](#-deployment)
 - [Contributing](#-contributing)
+- [Roadmap](#-roadmap)
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- **Node.js** 18.0 or higher
+- **npm** or **yarn**
+- **Google Gemini API Key** (Get one at [Google AI Studio](https://aistudio.google.com/))
+
+### Quick Start
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd TAFE-Educator-Content-Generator
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Set up environment variables**
+   
+   Create a `.env.local` file in the root directory:
+   ```env
+   GEMINI_API_KEY=your_gemini_api_key_here
+   ```
+
+4. **Add template files (Optional)**
+   
+   Template files are located in the `examples/` directory:
+   - `examples/Template_WB.docx` - Template workbook structure
+   - `examples/UEEEIC0010_WB.docx` - Example workbook for style reference
+
+5. **Run the development server**
+   ```bash
+   npm run dev
+   ```
+
+6. **Open your browser**
+   
+   Navigate to [http://localhost:3000](http://localhost:3000)
+
+🎉 **You're ready to go!** Start by searching for a TAFE unit code to generate your first workbook.
+
+---
+
+## 🔐 Environment Setup
+
+### Required Environment Variables
+
+| Variable | Description | Where to Get It |
+|----------|-------------|-----------------|
+| `GEMINI_API_KEY` | Google Gemini API Key for AI generation | [Google AI Studio](https://aistudio.google.com/) |
+
+### Setting Up Your API Key
+
+#### Local Development
+
+Create a `.env.local` file in the root directory:
+
+```env
+GEMINI_API_KEY=your_gemini_api_key_here
+```
+
+#### Production (Vercel)
+
+1. Go to [Vercel Dashboard](https://vercel.com/dashboard)
+2. Select your project
+3. Navigate to **Settings** → **Environment Variables**
+4. Add `GEMINI_API_KEY` with your API key
+5. Select all environments (Production, Preview, Development)
+6. Save and redeploy
+
+### Optional Configuration
+
+For enhanced features, you may need:
+- `config/lab-hweng-vv5e3f7cc6-d0c169fff1d7.json` - Google Cloud credentials (for Slides API integration)
+
+---
+
+## 📖 Usage Guide
+
+### Generating a Workbook
+
+1. **Navigate to Workbook Generator**
+   - Click "Start a Workbook" from the homepage
+   - Or go to `/workbook`
+
+2. **Search for Unit**
+   - Enter a Unit Code (e.g., `UEECD0014`)
+   - Click "Create"
+   - Select the correct unit from results
+
+3. **Upload Resources (Optional)**
+   - Drag and drop additional reference materials
+   - Supported formats: PDF, DOCX, TXT
+
+4. **Generate Structure**
+   - Click "Generate Workbook Structure"
+   - Wait for AI to scrape training.gov.au
+   - Review the proposed Table of Contents
+
+5. **Customize TOC**
+   - ✏️ Edit chapter titles
+   - ➕ Add new chapters
+   - ➖ Remove irrelevant sections
+
+6. **Generate Content**
+   - Click "Confirm & Generate Workbook"
+   - Monitor progress as each chapter is generated
+   - Download the final DOCX file
+
+### Generating Assessments
+
+1. **Navigate to Assessment Generator** (`/assessment`)
+2. **Upload Workbook** (DOCX file)
+3. **Click "Generate Assessment"**
+4. **Review Questions** (Edit if needed)
+5. **Download:**
+   - Student version (questions only)
+   - Teacher version (with answers)
+
+### Generating Slides
+
+1. **Navigate to Slides Generator** (`/slides`)
+2. **Upload Teaching Materials**
+3. **Click "Generate Slide Outline"**
+4. **Review and Edit Slides**
+5. **Optional:** Enhance Design with AI
+6. **Download PowerPoint File**
 
 ---
 
@@ -283,119 +418,6 @@ graph TD
 
 ---
 
-## 🚀 Getting Started
-
-### Prerequisites
-
-- **Node.js** 18.0 or higher
-- **npm** or **yarn**
-- **Google Gemini API Key** (Get one at [Google AI Studio](https://aistudio.google.com/))
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd TAFE-Educator-Content-Generator
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Set up environment variables**
-   
-   Create a `.env.local` file in the root directory:
-   ```env
-   GEMINI_API_KEY=your_gemini_api_key_here
-   ```
-
-4. **Add template files (Optional)**
-   
-   Place these files in the root directory for enhanced generation:
-   - `Template_WB.docx` - Template workbook structure
-   - `UEEEIC0010_WB.docx` - Example workbook for style reference
-
-5. **Run the development server**
-   ```bash
-   npm run dev
-   ```
-
-6. **Open your browser**
-   
-   Navigate to [http://localhost:3000](http://localhost:3000)
-
----
-
-## 🔐 Environment Setup
-
-### Required Environment Variables
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `GEMINI_API_KEY` | Google Gemini API Key | `AIza...` |
-
-### Optional Configuration
-
-For production deployment, ensure the following files exist:
-- `lab-hweng-vv5e3f7cc6-d0c169fff1d7.json` - Google Cloud credentials (for Slides API)
-
----
-
-## 📖 Usage Guide
-
-### Generating a Workbook
-
-1. **Navigate to Workbook Generator**
-   - Click "Start a Workbook" from the homepage
-   - Or go to `/workbook`
-
-2. **Search for Unit**
-   - Enter a Unit Code (e.g., `UEECD0014`)
-   - Click "Create"
-   - Select the correct unit from results
-
-3. **Upload Resources (Optional)**
-   - Drag and drop additional reference materials
-   - Supported formats: PDF, DOCX, TXT
-
-4. **Generate Structure**
-   - Click "Generate Workbook Structure"
-   - Wait for AI to scrape training.gov.au
-   - Review the proposed Table of Contents
-
-5. **Customize TOC**
-   - ✏️ Edit chapter titles
-   - ➕ Add new chapters
-   - ➖ Remove irrelevant sections
-
-6. **Generate Content**
-   - Click "Confirm & Generate Workbook"
-   - Monitor progress as each chapter is generated
-   - Download the final DOCX file
-
-### Generating Assessments
-
-1. **Navigate to Assessment Generator** (`/assessment`)
-2. **Upload Workbook** (DOCX file)
-3. **Click "Generate Assessment"**
-4. **Review Questions** (Edit if needed)
-5. **Download:**
-   - Student version (questions only)
-   - Teacher version (with answers)
-
-### Generating Slides
-
-1. **Navigate to Slides Generator** (`/slides`)
-2. **Upload Teaching Materials**
-3. **Click "Generate Slide Outline"**
-4. **Review and Edit Slides**
-5. **Optional:** Enhance Design with AI
-6. **Download PowerPoint File**
-
----
-
 ## 🔌 API Documentation
 
 ### POST `/api/scrape`
@@ -589,8 +611,19 @@ TAFE-Educator-Content-Generator/
 │       └── googleSlides.js          # Google Slides integration
 ├── public/                          # Static assets
 ├── mcp-server/                      # MCP server (future feature)
-├── Template_WB.docx                 # Workbook template
-├── UEEEIC0010_WB.docx              # Example workbook
+├── examples/                        # Example templates and files
+│   ├── Template_WB.docx             # Workbook template
+│   ├── UEEEIC0010_WB.docx          # Example workbook
+│   └── The Australian Energy Sector.pptx # Sample presentation
+├── scripts/                         # Development and test scripts
+│   ├── check_mcp.py                 # MCP server check
+│   ├── debug_tga.js                 # Debug script
+│   ├── test_search.js               # Search functionality test
+│   └── list_models.js               # List available AI models
+├── docs/                            # Documentation
+│   └── INSTRUCTIONS.md              # Setup instructions
+├── config/                          # Configuration files
+│   └── lab-hweng-*.json             # Google Cloud credentials
 ├── package.json                     # Dependencies
 ├── next.config.mjs                  # Next.js configuration
 ├── vercel.json                      # Vercel deployment config
@@ -650,7 +683,8 @@ According to the National Training Register:
 
 3. **Configure Environment Variables**
    - Add `GEMINI_API_KEY` in Vercel dashboard
-   - Settings → Environment Variables
+   - Settings → Environment Variables → Add New
+   - Set for Production, Preview, and Development
 
 4. **Deploy**
    - Vercel will automatically build and deploy
@@ -696,6 +730,27 @@ This is a proprietary project. For internal development:
 
 ---
 
+## 🎯 Roadmap
+
+### Current Version (v1.0)
+- ✅ Workbook generation with live data scraping
+- ✅ Assessment creation with dual output
+- ✅ Slides generation with theme customization
+- ✅ ASQA compliance checking
+- ✅ Human-in-the-loop review workflows
+
+### Upcoming Features (v2.0)
+- 🔄 Batch processing (multiple units at once)
+- 🔄 Version control for workbooks
+- 🔄 Collaboration features (multi-user editing)
+- 🔄 LMS integration (Moodle, Canvas)
+- 🔄 Advanced analytics dashboard
+- 🔄 Custom branding for RTOs
+- 🔄 Multi-language support
+- 🔄 Automated quality assurance scoring
+
+---
+
 ## 📄 License
 
 Proprietary. All rights reserved.
@@ -707,24 +762,7 @@ Proprietary. All rights reserved.
 For questions or support, contact:
 - **Email:** support@tafegen.com.au
 - **Documentation:** [docs.tafegen.com.au](https://docs.tafegen.com.au)
-
----
-
-## 🎯 Roadmap
-
-### Current Version (v1.0)
-- ✅ Workbook generation
-- ✅ Assessment creation
-- ✅ Slides generation
-- ✅ ASQA compliance checking
-
-### Upcoming Features (v2.0)
-- 🔄 Batch processing (multiple units)
-- 🔄 Version control for workbooks
-- 🔄 Collaboration features
-- 🔄 LMS integration (Moodle, Canvas)
-- 🔄 Advanced analytics dashboard
-- 🔄 Custom branding for RTOs
+- **Live Demo:** [https://tafe-educator-content-generator.vercel.app/](https://tafe-educator-content-generator.vercel.app/)
 
 ---
 
@@ -741,7 +779,7 @@ For questions or support, contact:
 
 **Built with ❤️ for Australian TAFE Educators**
 
-[Homepage](http://localhost:3000) · 
+[Homepage](https://tafe-educator-content-generator.vercel.app/) · 
 [Documentation](https://docs.tafegen.com.au) · 
 [Report Bug](mailto:support@tafegen.com.au)
 

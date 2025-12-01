@@ -20,8 +20,8 @@ export async function POST(request) {
         let exampleText = "";
 
         try {
-            const templatePath = path.join(process.cwd(), 'Template_WB.docx');
-            const examplePath = path.join(process.cwd(), 'UEEEIC0010_WB.docx');
+            const templatePath = path.join(process.cwd(), 'examples', 'Template_WB.docx');
+            const examplePath = path.join(process.cwd(), 'examples', 'UEEEIC0010_WB.docx');
 
             const [templateBuffer, exampleBuffer] = await Promise.all([
                 fs.readFile(templatePath).catch(() => null),
