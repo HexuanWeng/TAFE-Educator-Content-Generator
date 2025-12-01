@@ -6,6 +6,8 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 import google.generativeai as genai
+from docx import Document
+import PyPDF2
 
 # Load environment variables
 load_dotenv()
@@ -47,23 +49,56 @@ async def handle_tool_call(call: ToolCall):
     else:
         raise HTTPException(status_code=404, detail=f"Tool '{call.tool}' not found")
 
+def extract_document_content(document_path: str) -> str:
+    """
+    Extract text content from various document formats
+    """
+    if not document_path or not os.path.exists(document_path):
+        return ""
+    
+    file_ext = os.path.splitext(document_path)[1].lower()
+    
+    try:
+        # DOCX files
+        if file_ext == '.docx':
+            doc = Document(document_path)
+            text = '\n'.join([paragraph.text for paragraph in doc.paragraphs])
+            print(f"✓ Extracted {len(text)} characters from DOCX")
+            return text
+        
+        # PDF files
+        elif file_ext == '.pdf':
+            with open(document_path, 'rb') as file:
+                pdf_reader = PyPDF2.PdfReader(file)
+                text = ''
+                for page in pdf_reader.pages:
+                    text += page.extract_text() + '\n'
+                print(f"✓ Extracted {len(text)} characters from PDF ({len(pdf_reader.pages)} pages)")
+                return text
+        
+        # Text files
+        elif file_ext in ['.txt', '.md', '.markdown']:
+            with open(document_path, 'r', encoding='utf-8') as f:
+                text = f.read()
+            print(f"✓ Read {len(text)} characters from text file")
+            return text
+        
+        else:
+            print(f"⚠️  Unsupported file format: {file_ext}")
+            return ""
+            
+    except Exception as e:
+        print(f"⚠️  Could not read document: {e}")
+        return ""
+
 def generate_slides(topic: str, document_path: str, slide_count: int, theme: str):
     """
     Generate slides from document content using Google Gemini AI
     """
     print(f"Processing document at: {document_path}")
     
-    # Try to read document content
-    document_content = ""
-    if document_path and os.path.exists(document_path):
-        try:
-            # Read file content (supports text files, markdown, etc.)
-            with open(document_path, 'r', encoding='utf-8') as f:
-                document_content = f.read()
-            print(f"✓ Read {len(document_content)} characters from document")
-        except Exception as e:
-            print(f"⚠️  Could not read document: {e}")
-            document_content = ""
+    # Extract document content with proper parsing
+    document_content = extract_document_content(document_path)
     
     # Use Gemini AI if available and we have content
     if GEMINI_API_KEY and document_content:
@@ -166,16 +201,8 @@ def generate_mindmap(topic: str, document_path: str):
     """
     print(f"Generating mind map for: {topic}")
     
-    # Try to read document content
-    document_content = ""
-    if document_path and os.path.exists(document_path):
-        try:
-            with open(document_path, 'r', encoding='utf-8') as f:
-                document_content = f.read()
-            print(f"✓ Read {len(document_content)} characters from document")
-        except Exception as e:
-            print(f"⚠️  Could not read document: {e}")
-            document_content = ""
+    # Extract document content with proper parsing
+    document_content = extract_document_content(document_path)
     
     # Use Gemini AI if available and we have content
     if GEMINI_API_KEY and document_content:

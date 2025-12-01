@@ -6,13 +6,30 @@ import { writeFile } from 'fs/promises';
 const MCP_SERVER_URL = process.env.MCP_SERVER_URL || 'http://localhost:8001';
 
 export async function POST(request) {
+  // Parse formData once at the top level
+  let formData;
+  let files;
+  let topic;
+  let slideCount;
+  let theme;
+  
   try {
-    const formData = await request.formData();
-    const files = formData.getAll('files');
-    const topic = formData.get('topic') || 'TAFE Unit Presentation';
-    const slideCount = parseInt(formData.get('slideCount') || '12');
-    const theme = formData.get('theme') || 'modern';
-
+    formData = await request.formData();
+    files = formData.getAll('files');
+    topic = formData.get('topic') || 'TAFE Unit Presentation';
+    slideCount = parseInt(formData.get('slideCount') || '12');
+    theme = formData.get('theme') || 'modern';
+  } catch (parseError) {
+    return NextResponse.json(
+      {
+        error: 'Failed to parse request',
+        details: parseError.message
+      },
+      { status: 400 }
+    );
+  }
+  
+  try {
     // Process uploaded files (if any)
     let documentPath = null;
     let documentContent = '';
@@ -102,10 +119,7 @@ export async function POST(request) {
     if (error.message.includes('ECONNREFUSED') || error.message.includes('fetch failed')) {
       console.warn('⚠️ MCP server not available, using fallback slide generation');
       
-      const formData = await request.formData();
-      const topic = formData.get('topic') || 'TAFE Unit Presentation';
-      const slideCount = parseInt(formData.get('slideCount') || '12');
-      
+      // Use already-parsed values (don't read formData again!)
       // Fallback: Generate basic slide structure
       const slides = [];
       for (let i = 1; i <= slideCount; i++) {
