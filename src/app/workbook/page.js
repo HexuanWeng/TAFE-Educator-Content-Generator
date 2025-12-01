@@ -13,36 +13,125 @@ const thinkingSteps = [
 ];
 
 export default function WorkbookPage() {
-    const [url, setUrl] = useState("");
+    // State
+    const [searchQuery, setSearchQuery] = useState("");
+    const [searchResults, setSearchResults] = useState(null);
+    const [isSearching, setIsSearching] = useState(false);
+    const [selectedUnit, setSelectedUnit] = useState(null); // { code, title, url }
+    const [scrapePreview, setScrapePreview] = useState(null); // Store scraping results to display
+
     const [files, setFiles] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const [toc, setToc] = useState(null);
     const [thinkingStep, setThinkingStep] = useState("");
 
+    // Effects
     useEffect(() => {
         let interval;
-        if (isLoading && toc) { // Only show thinking steps during generation, not initial scraping
+        if (isLoading && toc) {
             let stepIndex = 0;
             setThinkingStep(thinkingSteps[0]);
             interval = setInterval(() => {
                 stepIndex = (stepIndex + 1) % thinkingSteps.length;
                 setThinkingStep(thinkingSteps[stepIndex]);
-            }, 3000); // Change step every 3 seconds
+            }, 3000);
         } else {
             setThinkingStep("");
         }
         return () => clearInterval(interval);
     }, [isLoading, toc]);
 
-    const handleSubmit = async (e) => {
+    // Handlers
+    const handleSearch = async (e) => {
         e.preventDefault();
+        if (!searchQuery.trim()) return;
+
+        setIsSearching(true);
+        setSearchResults(null);
+        setSelectedUnit(null); // Reset selection on new search
+
+        try {
+            const res = await fetch('/api/search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: searchQuery })
+            });
+
+            if (!res.ok) throw new Error("Search failed");
+            const data = await res.json();
+
+            const results = data.results || [];
+            setSearchResults(results);
+
+            // Auto-select if exactly one result is found (Direct Match)
+            if (results.length === 1) {
+                selectUnit(results[0]);
+            }
+
+        } catch (err) {
+            console.error("Search error:", err);
+            alert("Search failed. Please try again.");
+        } finally {
+            setIsSearching(false);
+        }
+    };
+
+    const selectUnit = async (unit) => {
+        setSelectedUnit(unit);
+        setSearchResults(null); // Hide results after selection
+        setSearchQuery(""); // Clear search bar
+
+        // Immediately fetch scrape preview
+        setScrapePreview(null); // Reset first
         setIsLoading(true);
+        setThinkingStep("Fetching unit details from training.gov.au...");
 
         try {
             const res = await fetch('/api/scrape', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url })
+                body: JSON.stringify({ url: unit.url })
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                setScrapePreview(data);
+                setThinkingStep("✓ Unit details loaded");
+            } else {
+                setScrapePreview({ error: "Could not fetch unit details" });
+            }
+        } catch (err) {
+            console.error("Scrape preview error:", err);
+            setScrapePreview({ error: err.message });
+        } finally {
+            setIsLoading(false);
+            setTimeout(() => setThinkingStep(""), 1500);
+        }
+    };
+
+    const handleGenerate = async (e) => {
+        e.preventDefault();
+        if (!selectedUnit) return;
+
+        setIsLoading(true);
+        setThinkingStep("Analyzing unit structure from training.gov.au...");
+
+        try {
+            // Use FormData to send both URL and files
+            const formData = new FormData();
+            formData.append('url', selectedUnit.url);
+
+            // Add uploaded files if any
+            if (files && files.length > 0) {
+                for (let i = 0; i < files.length; i++) {
+                    formData.append('files', files[i]);
+                }
+                setThinkingStep("Analyzing uploaded resources...");
+            }
+
+            const res = await fetch('/api/scrape', {
+                method: 'POST',
+                body: formData  // Send as FormData instead of JSON
             });
 
             if (!res.ok) {
@@ -52,7 +141,11 @@ export default function WorkbookPage() {
 
             const data = await res.json();
 
-            // Generate initial TOC based on scraped data
+            setThinkingStep(`✓ Found unit: ${data.title}`);
+
+            // Brief delay to show the success message
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
             setToc({
                 title: data.title,
                 chapters: data.chapters || [
@@ -68,9 +161,11 @@ export default function WorkbookPage() {
             alert("Error: " + err.message);
         } finally {
             setIsLoading(false);
+            setThinkingStep("");
         }
     };
 
+    // TOC Handlers
     const updateChapter = (index, value) => {
         const newChapters = [...toc.chapters];
         newChapters[index] = value;
@@ -91,53 +186,287 @@ export default function WorkbookPage() {
         const newChapters = toc.chapters.filter((_, i) => i !== index);
         setToc({ ...toc, chapters: newChapters });
     };
+
+    const handleFinalExport = async () => {
+        setIsLoading(true);
+        try {
+            const generatedChapters = [];
+
+            for (let i = 0; i < toc.chapters.length; i++) {
+                const chapterTitle = toc.chapters[i];
+                setThinkingStep(`Agent working on Chapter ${i + 1}: ${chapterTitle}...`);
+
+                const res = await fetch('/api/generate-chapter', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chapterTitle,
+                        unitTitle: toc.title,
+                        unitCode: selectedUnit.code
+                    })
+                });
+
+                if (!res.ok) throw new Error(`Failed to generate chapter: ${chapterTitle}`);
+
+                const data = await res.json();
+                generatedChapters.push({
+                    title: chapterTitle,
+                    content: data.content
+                });
+            }
+
+            setThinkingStep("Compiling final workbook...");
+
+            const fullWorkbook = {
+                title: toc.title,
+                chapters: generatedChapters
+            };
+
+            const exportRes = await fetch('/api/export', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ workbook: fullWorkbook })
+            });
+
+            if (!exportRes.ok) throw new Error("Export failed");
+
+            const blob = await exportRes.blob();
+            const urlObj = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = urlObj;
+            a.download = `${toc.title.replace(/[^a-z0-9]/gi, '_')}.docx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(urlObj);
+            document.body.removeChild(a);
+
+            alert("Workbook generated and downloaded!");
+        } catch (err) {
+            alert("Error: " + err.message);
+        } finally {
+            setIsLoading(false);
+            setThinkingStep("");
+        }
+    };
+
     return (
-        <main>
+        <main style={{ minHeight: '100vh', background: 'var(--background)' }}>
             <Navbar />
-            <div className="container">
-                <div className="header" style={{ borderBottom: 'none', marginBottom: '1rem' }}>
-                    <h1>Generate Workbook</h1>
+
+            <div className="container" style={{ maxWidth: '900px', paddingTop: '3rem' }}>
+
+                {/* Header */}
+                <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
+                    <h1 className="text-gradient" style={{ fontSize: '3rem', fontWeight: '800', marginBottom: '1rem' }}>
+                        Create New Workbook
+                    </h1>
+                    <p style={{ fontSize: '1.2rem', color: '#64748b' }}>
+                        Search for a TAFE unit to automatically generate a comprehensive learner workbook.
+                    </p>
                 </div>
 
-                {!toc ? (
-                    <div className="card" style={{ maxWidth: '800px', margin: '0 auto' }}>
-                        <form onSubmit={handleSubmit}>
-                            <div style={{ marginBottom: '2rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>
-                                    TAFE Unit URL
-                                </label>
-                                <input
-                                    type="url"
-                                    placeholder="https://training.gov.au/Training/Details/UEECD0014"
-                                    value={url}
-                                    onChange={(e) => setUrl(e.target.value)}
-                                    style={{
-                                        width: '100%',
-                                        padding: '1rem',
-                                        borderRadius: 'var(--radius)',
-                                        border: '1px solid var(--border)',
-                                        background: 'var(--input)',
-                                        color: 'var(--foreground)',
-                                        fontSize: '1rem'
-                                    }}
-                                    required
-                                />
-                                <p style={{ fontSize: '0.875rem', color: '#64748b', marginTop: '0.5rem' }}>
-                                    Enter the full URL from training.gov.au
-                                </p>
-                            </div>
+                {/* Search Section */}
+                <div className="card card-hover" style={{ marginBottom: '2rem', position: 'relative', zIndex: 10 }}>
+                    <form onSubmit={handleSearch} style={{ display: 'flex', gap: '1rem' }}>
+                        <div style={{ position: 'relative', flex: 1 }}>
+                            <span style={{ position: 'absolute', left: '1.2rem', top: '50%', transform: 'translateY(-50%)', fontSize: '1.2rem' }}>✨</span>
+                            <input
+                                type="text"
+                                placeholder="Enter Unit Code (e.g. UEECD0014)"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                style={{
+                                    width: '100%',
+                                    padding: '1.2rem 1.2rem 1.2rem 3.5rem',
+                                    borderRadius: 'var(--radius)',
+                                    border: '1px solid var(--border)',
+                                    background: 'var(--input)',
+                                    color: 'var(--foreground)',
+                                    fontSize: '1.1rem',
+                                    outline: 'none',
+                                    transition: 'border-color 0.2s'
+                                }}
+                            />
+                        </div>
+                        <button
+                            type="submit"
+                            className="btn btn-primary"
+                            disabled={isSearching}
+                            style={{ padding: '0 2.5rem', fontSize: '1.1rem' }}
+                        >
+                            {isSearching ? "..." : "Create"}
+                        </button>
+                    </form>
 
+                    {/* Search Results Dropdown */}
+                    {searchResults && searchResults.length > 0 && (
+                        <div style={{
+                            marginTop: '1rem',
+                            borderTop: '1px solid var(--border)',
+                            paddingTop: '1rem'
+                        }}>
+                            <p style={{ fontSize: '0.875rem', color: '#64748b', marginBottom: '0.5rem' }}>Select a unit:</p>
+                            <ul style={{ listStyle: 'none', padding: 0 }}>
+                                {searchResults.map((result, i) => (
+                                    <li key={i}>
+                                        <button
+                                            onClick={() => selectUnit(result)}
+                                            style={{
+                                                width: '100%',
+                                                textAlign: 'left',
+                                                padding: '1rem',
+                                                background: 'var(--background)',
+                                                border: '1px solid var(--border)',
+                                                borderRadius: 'var(--radius)',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '1rem',
+                                                transition: 'all 0.2s'
+                                            }}
+                                            onMouseOver={(e) => e.currentTarget.style.borderColor = 'var(--primary)'}
+                                            onMouseOut={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
+                                        >
+                                            <span style={{
+                                                background: 'var(--primary)',
+                                                color: 'white',
+                                                padding: '0.25rem 0.75rem',
+                                                borderRadius: '2rem',
+                                                fontSize: '0.875rem',
+                                                fontWeight: 'bold'
+                                            }}>
+                                                {result.code}
+                                            </span>
+                                            <span style={{ fontWeight: '500' }}>{result.title}</span>
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+
+                    {searchResults && searchResults.length === 0 && (
+                        <div style={{ marginTop: '1rem', color: '#ef4444', textAlign: 'center' }}>
+                            No units found. Please check the code and try again.
+                        </div>
+                    )}
+                </div>
+
+                {/* Scrape Preview Section */}
+                {scrapePreview && !toc && (
+                    <div className="card" style={{ marginBottom: '2rem', animation: 'fadeIn 0.5s ease' }}>
+                        <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ fontSize: '1.5rem' }}>📋</span>
+                            Unit Details from training.gov.au
+                        </h3>
+
+                        {scrapePreview.error ? (
+                            <div style={{ padding: '1rem', background: '#fee', borderRadius: 'var(--radius)', color: '#c00' }}>
+                                ⚠️ {scrapePreview.error}
+                            </div>
+                        ) : (
+                            <>
+                                <div style={{
+                                    padding: '1rem',
+                                    background: 'var(--input)',
+                                    borderRadius: 'var(--radius)',
+                                    marginBottom: '1rem'
+                                }}>
+                                    <p style={{ fontSize: '0.875rem', color: '#64748b', marginBottom: '0.5rem' }}>Unit Title:</p>
+                                    <p style={{ fontWeight: '600', fontSize: '1.1rem' }}>{scrapePreview.title}</p>
+                                </div>
+
+                                <div>
+                                    <p style={{ fontSize: '0.875rem', color: '#64748b', marginBottom: '0.5rem' }}>
+                                        Proposed Table of Contents ({scrapePreview.chapters?.length || 0} chapters):
+                                    </p>
+                                    <ul style={{
+                                        listStyle: 'none',
+                                        padding: 0,
+                                        maxHeight: '300px',
+                                        overflowY: 'auto'
+                                    }}>
+                                        {scrapePreview.chapters?.map((chapter, i) => (
+                                            <li key={i} style={{
+                                                padding: '0.5rem 1rem',
+                                                background: i % 2 === 0 ? 'var(--background)' : 'transparent',
+                                                borderRadius: 'var(--radius)',
+                                                display: 'flex',
+                                                gap: '0.75rem',
+                                                alignItems: 'center'
+                                            }}>
+                                                <span style={{
+                                                    color: 'var(--primary)',
+                                                    fontWeight: 'bold',
+                                                    minWidth: '2rem'
+                                                }}>{i + 1}.</span>
+                                                <span>{chapter}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+
+                                <div style={{
+                                    marginTop: '1rem',
+                                    padding: '0.75rem 1rem',
+                                    background: '#e8f5e9',
+                                    borderRadius: 'var(--radius)',
+                                    color: '#2e7d32',
+                                    fontSize: '0.875rem'
+                                }}>
+                                    ✓ Ready to customize and generate workbook
+                                </div>
+                            </>
+                        )}
+                    </div>
+                )}
+
+                {/* Selected Unit & Configuration */}
+                {selectedUnit && !toc && (
+                    <div className="card" style={{ animation: 'fadeIn 0.5s ease' }}>
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: '2rem',
+                            paddingBottom: '1rem',
+                            borderBottom: '1px solid var(--border)'
+                        }}>
+                            <div>
+                                <h2 style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>{selectedUnit.title}</h2>
+                                <span style={{
+                                    color: 'var(--primary)',
+                                    fontWeight: 'bold',
+                                    fontSize: '1.1rem'
+                                }}>
+                                    {selectedUnit.code}
+                                </span>
+                            </div>
+                            <button
+                                onClick={() => setSelectedUnit(null)}
+                                style={{ color: '#64748b', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
+                            >
+                                Change Unit
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleGenerate}>
                             <div style={{ marginBottom: '2rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>
+                                <label style={{ display: 'block', marginBottom: '0.75rem', fontWeight: '600' }}>
                                     Upload Resources (Optional)
                                 </label>
                                 <div style={{
                                     border: '2px dashed var(--border)',
                                     borderRadius: 'var(--radius)',
-                                    padding: '2rem',
+                                    padding: '3rem',
                                     textAlign: 'center',
-                                    background: 'var(--background)'
-                                }}>
+                                    background: 'var(--background)',
+                                    cursor: 'pointer',
+                                    transition: 'border-color 0.2s'
+                                }}
+                                    onMouseOver={(e) => e.currentTarget.style.borderColor = 'var(--primary)'}
+                                    onMouseOut={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
+                                >
                                     <input
                                         type="file"
                                         multiple
@@ -145,77 +474,97 @@ export default function WorkbookPage() {
                                         style={{ display: 'none' }}
                                         id="file-upload"
                                     />
-                                    <label htmlFor="file-upload" className="btn" style={{ background: 'var(--input)', marginBottom: '1rem' }}>
-                                        Choose Files
+                                    <label htmlFor="file-upload" style={{ cursor: 'pointer' }}>
+                                        <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>📂</div>
+                                        <p style={{ fontWeight: '600', marginBottom: '0.5rem' }}>Click to upload files</p>
+                                        <p style={{ fontSize: '0.875rem', color: '#64748b' }}>
+                                            {files ? `${files.length} files selected` : "PDFs, DOCX, or text files"}
+                                        </p>
                                     </label>
-                                    <p style={{ fontSize: '0.875rem', color: '#64748b' }}>
-                                        {files ? `${files.length} files selected` : "Drag & drop or click to upload PDFs, DOCX, or text files"}
-                                    </p>
                                 </div>
                             </div>
 
                             <button
                                 type="submit"
                                 className="btn btn-primary"
-                                style={{ width: '100%' }}
+                                style={{ width: '100%', padding: '1rem', fontSize: '1.1rem' }}
                                 disabled={isLoading}
                             >
-                                {isLoading ? "Analyzing Unit..." : "Generate Table of Contents"}
+                                {isLoading ? (
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', justifyContent: 'center' }}>
+                                        <span className="spinner" style={{
+                                            width: '20px',
+                                            height: '20px',
+                                            border: '3px solid rgba(255,255,255,0.3)',
+                                            borderTopColor: '#fff',
+                                            borderRadius: '50%',
+                                            animation: 'spin 1s linear infinite',
+                                            display: 'inline-block'
+                                        }}></span>
+                                        {thinkingStep || "Analyzing Unit Structure..."}
+                                    </span>
+                                ) : "Generate Workbook Structure"}
                             </button>
+                            <style jsx>{`
+                                @keyframes spin { to { transform: rotate(360deg); } }
+                            `}</style>
                         </form>
                     </div>
-                ) : (
-                    <div className="card">
-                        <h2>Review Table of Contents</h2>
-                        <p style={{ marginBottom: '2rem', color: '#64748b' }}>
-                            Based on {url} and your uploaded files.
-                        </p>
+                )}
+
+                {/* TOC Review */}
+                {toc && (
+                    <div className="card" style={{ animation: 'fadeIn 0.5s ease' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                            <h2>Review Workbook Structure</h2>
+                            <button
+                                onClick={() => setToc(null)}
+                                className="btn"
+                                style={{ background: 'var(--input)' }}
+                            >
+                                Back to Config
+                            </button>
+                        </div>
 
                         <div style={{ marginBottom: '2rem' }}>
-                            <h3 style={{ marginBottom: '1rem', color: 'var(--primary)' }}>{toc.title}</h3>
                             <ul style={{ listStyle: 'none', paddingLeft: '0' }}>
                                 {toc.chapters.map((chapter, i) => (
                                     <div key={i}>
-                                        {/* Insert Button Before Item */}
-                                        <div style={{ display: 'flex', justifyContent: 'center', margin: '0.5rem 0' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'center', margin: '0.25rem 0' }}>
                                             <button
                                                 onClick={() => insertChapter(i)}
                                                 style={{
-                                                    background: 'var(--input)',
-                                                    border: '1px dashed var(--border)',
-                                                    borderRadius: '50%',
-                                                    width: '24px',
-                                                    height: '24px',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
+                                                    background: 'transparent',
+                                                    border: 'none',
+                                                    color: 'var(--primary)',
                                                     cursor: 'pointer',
-                                                    color: 'var(--foreground)',
-                                                    fontSize: '1.2rem',
-                                                    lineHeight: '1'
+                                                    fontSize: '1.5rem',
+                                                    opacity: 0.5
                                                 }}
-                                                title="Insert Topic Here"
-                                            >
-                                                +
-                                            </button>
+                                                title="Insert Topic"
+                                            >+</button>
                                         </div>
 
                                         <li style={{
                                             padding: '1rem',
-                                            borderBottom: '1px solid var(--border)',
+                                            background: 'var(--background)',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: 'var(--radius)',
                                             display: 'flex',
                                             alignItems: 'center',
                                             gap: '1rem'
                                         }}>
                                             <span style={{
-                                                background: 'var(--input)',
-                                                width: '30px',
-                                                height: '30px',
+                                                background: 'var(--primary)',
+                                                color: 'white',
+                                                width: '28px',
+                                                height: '28px',
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
                                                 borderRadius: '50%',
                                                 fontWeight: 'bold',
+                                                fontSize: '0.875rem',
                                                 flexShrink: 0
                                             }}>{i + 1}</span>
                                             <input
@@ -225,9 +574,12 @@ export default function WorkbookPage() {
                                                 style={{
                                                     flex: 1,
                                                     padding: '0.5rem',
-                                                    border: '1px solid var(--border)',
-                                                    borderRadius: 'var(--radius)',
-                                                    fontSize: '1rem'
+                                                    border: 'none',
+                                                    background: 'transparent',
+                                                    fontSize: '1rem',
+                                                    fontWeight: '500',
+                                                    color: 'var(--foreground)',
+                                                    outline: 'none'
                                                 }}
                                             />
                                             <button
@@ -237,138 +589,45 @@ export default function WorkbookPage() {
                                                     border: 'none',
                                                     color: '#ef4444',
                                                     cursor: 'pointer',
-                                                    fontSize: '1.2rem'
+                                                    fontSize: '1.2rem',
+                                                    opacity: 0.7
                                                 }}
-                                                title="Remove Chapter"
-                                            >
-                                                ×
-                                            </button>
+                                                title="Remove"
+                                            >×</button>
                                         </li>
                                     </div>
                                 ))}
-                                {/* Insert Button After Last Item */}
                                 <div style={{ display: 'flex', justifyContent: 'center', margin: '0.5rem 0' }}>
-                                    <button
-                                        onClick={() => insertChapter(toc.chapters.length)}
-                                        style={{
-                                            background: 'var(--input)',
-                                            border: '1px dashed var(--border)',
-                                            borderRadius: '50%',
-                                            width: '24px',
-                                            height: '24px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            cursor: 'pointer',
-                                            color: 'var(--foreground)',
-                                            fontSize: '1.2rem',
-                                            lineHeight: '1'
-                                        }}
-                                        title="Add Topic at End"
-                                    >
-                                        +
-                                    </button>
+                                    <button onClick={() => insertChapter(toc.chapters.length)} className="btn" style={{ background: 'var(--input)', fontSize: '0.875rem' }}>+ Add Topic</button>
                                 </div>
                             </ul>
                         </div>
 
-                        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-                            <button
-                                className="btn"
-                                style={{ background: 'var(--input)' }}
-                                onClick={() => setToc(null)}
-                            >
-                                Back
-                            </button>
-                            <button
-                                className="btn btn-primary"
-                                onClick={async () => {
-                                    setIsLoading(true);
-                                    try {
-                                        const generatedChapters = [];
-
-                                        // Iterative Agentic Generation
-                                        for (let i = 0; i < toc.chapters.length; i++) {
-                                            const chapterTitle = toc.chapters[i];
-                                            setThinkingStep(`Agent working on Chapter ${i + 1}: ${chapterTitle}...`);
-
-                                            // Call the Workbook Content Agent
-                                            const res = await fetch('/api/generate-chapter', {
-                                                method: 'POST',
-                                                headers: { 'Content-Type': 'application/json' },
-                                                body: JSON.stringify({
-                                                    chapterTitle,
-                                                    unitTitle: toc.title,
-                                                    unitCode: url.split('/').pop() // Rough extraction of code
-                                                })
-                                            });
-
-                                            if (!res.ok) throw new Error(`Failed to generate chapter: ${chapterTitle}`);
-
-                                            const data = await res.json();
-                                            generatedChapters.push({
-                                                title: chapterTitle,
-                                                content: data.content
-                                            });
-                                        }
-
-                                        setThinkingStep("Compiling final workbook...");
-
-                                        const fullWorkbook = {
-                                            title: toc.title,
-                                            chapters: generatedChapters
-                                        };
-
-                                        // Export to DOCX
-                                        const exportRes = await fetch('/api/export', {
-                                            method: 'POST',
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({ workbook: fullWorkbook })
-                                        });
-
-                                        if (!exportRes.ok) throw new Error("Export failed");
-
-                                        const blob = await exportRes.blob();
-                                        const urlObj = window.URL.createObjectURL(blob);
-                                        const a = document.createElement('a');
-                                        a.href = urlObj;
-                                        a.download = `${toc.title.replace(/[^a-z0-9]/gi, '_')}.docx`;
-                                        document.body.appendChild(a);
-                                        a.click();
-                                        window.URL.revokeObjectURL(urlObj);
-                                        document.body.removeChild(a);
-
-                                        alert("Workbook generated and downloaded! The agent has included detailed Australian examples.");
-                                    } catch (err) {
-                                        alert("Error: " + err.message);
-                                    } finally {
-                                        setIsLoading(false);
-                                        setThinkingStep("");
-                                    }
-                                }}
-                                disabled={isLoading}
-                            >
-                                {isLoading ? (
-                                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <span className="spinner" style={{
-                                            width: '16px',
-                                            height: '16px',
-                                            border: '2px solid rgba(255,255,255,0.3)',
-                                            borderTopColor: '#fff',
-                                            borderRadius: '50%',
-                                            animation: 'spin 1s linear infinite',
-                                            display: 'inline-block'
-                                        }}></span>
-                                        {thinkingStep}
-                                    </span>
-                                ) : "Confirm & Generate Workbook"}
-                            </button>
-                            <style jsx>{`
-                                @keyframes spin {
-                                    to { transform: rotate(360deg); }
-                                }
-                            `}</style>
-                        </div>
+                        <button
+                            className="btn btn-primary"
+                            style={{ width: '100%', padding: '1rem', fontSize: '1.1rem' }}
+                            onClick={handleFinalExport}
+                            disabled={isLoading}
+                        >
+                            {isLoading ? (
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', justifyContent: 'center' }}>
+                                    <span className="spinner" style={{
+                                        width: '20px',
+                                        height: '20px',
+                                        border: '3px solid rgba(255,255,255,0.3)',
+                                        borderTopColor: '#fff',
+                                        borderRadius: '50%',
+                                        animation: 'spin 1s linear infinite',
+                                        display: 'inline-block'
+                                    }}></span>
+                                    {thinkingStep}
+                                </span>
+                            ) : "Confirm & Generate Workbook"}
+                        </button>
+                        <style jsx>{`
+                            @keyframes spin { to { transform: rotate(360deg); } }
+                            @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+                        `}</style>
                     </div>
                 )}
             </div>

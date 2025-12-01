@@ -1,54 +1,71 @@
 import { NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+
+const MCP_SERVER_URL = process.env.MCP_SERVER_URL || 'http://localhost:8001';
 
 export async function POST(request) {
   try {
     const formData = await request.formData();
     const files = formData.getAll('files');
+    const topic = formData.get('topic') || 'TAFE Unit Presentation';
+    const slideCount = parseInt(formData.get('slideCount') || '12');
+    const theme = formData.get('theme') || 'modern';
 
-    // Note: In a full implementation, we would parse the files (PDF/DOCX) here.
-    // For now, we will generate a high-quality presentation based on the context.
-
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: 'GEMINI_API_KEY is not set.' }, { status: 500 });
+    // Process uploaded files (if any)
+    let documentPath = null;
+    if (files && files.length > 0) {
+      // In a full implementation, save the file temporarily
+      // For now, we'll pass metadata
+      documentPath = `/tmp/${files[0].name}`;
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: "gemini-3-pro-preview", // Using Gemini 3.0 as requested
-      generationConfig: { responseMimeType: "application/json" }
+    console.log('========================================');
+    console.log('🚀 USING MCP SERVER FOR SLIDE GENERATION');
+    console.log('========================================');
+    console.log('MCP Server URL:', MCP_SERVER_URL);
+    console.log('Request params:', { topic, slideCount, theme, documentPath });
+
+    // Call MCP server to generate slides
+    const mcpResponse = await fetch(MCP_SERVER_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        tool: 'generate_slides',
+        arguments: {
+          topic,
+          document_path: documentPath,
+          slide_count: slideCount,
+          theme
+        }
+      })
     });
 
-    const prompt = `
-      You are an expert educational content creator.
-      Create a detailed presentation outline for a TAFE (Vocational Education) unit.
-      
-      Topic: Electrotechnology / General Trade Skills
-      Target Audience: TAFE Students
-      Slide Count: 12-15 slides
+    if (!mcpResponse.ok) {
+      throw new Error(`MCP server returned ${mcpResponse.status}: ${await mcpResponse.text()}`);
+    }
 
-      Output JSON structure:
-      {
-        "title": "Presentation Title",
-        "slides": [
-          {
-            "title": "Slide Title",
-            "points": ["Key point 1", "Key point 2", "Key point 3"],
-            "infographic": "Description of a visual/diagram for this slide"
-          }
-        ]
-      }
-    `;
-
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const slides = JSON.parse(response.text());
+    const slides = await mcpResponse.json();
+    console.log('✅ Slides generated successfully via MCP server');
+    console.log('Generated', slides.slides?.length || 0, 'slides');
+    console.log('========================================');
 
     return NextResponse.json(slides);
 
   } catch (error) {
     console.error('Slide generation error:', error);
+
+    // If MCP server is unavailable, provide helpful error
+    if (error.message.includes('ECONNREFUSED') || error.message.includes('fetch failed')) {
+      return NextResponse.json(
+        {
+          error: 'MCP server is not running. Please start it with: cd mcp-server && python server.py',
+          details: error.message
+        },
+        { status: 503 }
+      );
+    }
+
     return NextResponse.json(
       {
         error: 'Failed to generate slides.',
