@@ -14,12 +14,38 @@ Detailed setup instructions for the NotebookLM MCP (Model Context Protocol) inte
 - Usage instructions for slide generation
 - Troubleshooting tips
 
-## Additional Documentation
+## Core Documentation
 
-For comprehensive documentation, see:
-- [Main README](../README.md) - Complete project documentation
+### 📖 [README.md](../README.md)
+Main project documentation with comprehensive overview, features, and usage guide.
+
+### 🚀 [DEPLOYMENT.md](./DEPLOYMENT.md)
+Complete deployment guide including:
+- Reproducible deployment steps
+- Multi-agent system architecture details
+- Tool integration documentation
+- Session and state management
+- Context engineering patterns
+- Observability implementation
+- Testing procedures
+
+### 🤖 [AGENT_CONCEPTS.md](./AGENT_CONCEPTS.md)
+Quick reference for AI agent concepts demonstrated in TAFE GEN:
+- Multi-agent system patterns
+- Sequential and loop agents
+- Tools integration
+- Session management
+- Context engineering
+- Observability patterns
+- Concept coverage matrix
+
+## Quick Links
+
 - [Getting Started Guide](../README.md#-getting-started) - Quick start instructions
 - [API Documentation](../README.md#-api-documentation) - API endpoint reference
+- [Architecture](../README.md#-architecture) - System architecture overview
+- [Deployment Guide](./DEPLOYMENT.md) - Production deployment steps
+- [Agent Concepts](./AGENT_CONCEPTS.md) - AI agent patterns reference
 
 ## Contributing Documentation
 
@@ -28,3 +54,4 @@ When adding new documentation:
 2. Include a table of contents for long documents
 3. Add cross-references to related documentation
 4. Update this README with new file descriptions
+5. Follow the established markdown style

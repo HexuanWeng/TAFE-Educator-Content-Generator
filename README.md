@@ -23,6 +23,7 @@
 - [Project Structure](#-project-structure)
 - [Value Proposition](#-value-proposition)
 - [Deployment](#-deployment)
+- [AI Agent Concepts](#-ai-agent-concepts)
 - [Contributing](#-contributing)
 - [Roadmap](#-roadmap)
 
@@ -669,7 +670,9 @@ According to the National Training Register:
 
 ## 🚀 Deployment
 
-### Vercel Deployment (Recommended)
+For complete deployment instructions, including reproducible deployment steps, see **[docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)**.
+
+### Quick Deploy (Vercel)
 
 1. **Push to GitHub**
    ```bash
@@ -701,6 +704,43 @@ According to the National Training Register:
    ```bash
    npm start
    ```
+
+📘 **For detailed deployment instructions:** See [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)
+
+---
+
+## 🤖 AI Agent Concepts
+
+TAFE GEN demonstrates advanced AI agent patterns and concepts:
+
+### Implemented Concepts
+
+✅ **Multi-Agent System**
+- Sequential agents (Research → Planning → Writer → Assessment/Presentation)
+- Loop agents (Iterative chapter generation)
+- Specialized domain agents (6 agents)
+
+✅ **Tools Integration**
+- Custom tools (Web scraping with Cheerio)
+- Built-in tools (Google Gemini 3.0 Pro)
+- Document processing (DOCX/PPTX generation)
+
+✅ **Session & State Management**
+- React state management
+- API context passing
+- Human-in-the-loop checkpointing
+
+✅ **Context Engineering**
+- RAG implementation with template files
+- Context compaction (structured prompts)
+- Dynamic context building from live data
+
+✅ **Observability**
+- Comprehensive logging
+- Real-time progress tracking
+- Error handling and user feedback
+
+📘 **For detailed concept documentation:** See [docs/AGENT_CONCEPTS.md](./docs/AGENT_CONCEPTS.md)
 
 ---
 
