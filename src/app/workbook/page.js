@@ -96,13 +96,28 @@ export default function WorkbookPage() {
             if (res.ok) {
                 const data = await res.json();
                 setScrapePreview(data);
-                setThinkingStep("✓ Unit details loaded");
+                
+                if (data.fallback || data.warning) {
+                    setThinkingStep("⚠️ Using default structure");
+                } else {
+                    setThinkingStep("✓ Unit details loaded");
+                }
             } else {
-                setScrapePreview({ error: "Could not fetch unit details" });
+                const errorData = await res.json().catch(() => ({}));
+                setScrapePreview({ 
+                    error: "Could not fetch unit details",
+                    details: errorData.details || errorData.error,
+                    suggestion: errorData.suggestion,
+                    fallbackAvailable: errorData.fallbackAvailable
+                });
             }
         } catch (err) {
             console.error("Scrape preview error:", err);
-            setScrapePreview({ error: err.message });
+            setScrapePreview({ 
+                error: "Network error occurred",
+                details: err.message,
+                suggestion: "Check your internet connection and try again."
+            });
         } finally {
             setIsLoading(false);
             setTimeout(() => setThinkingStep(""), 1500);
@@ -356,16 +371,60 @@ export default function WorkbookPage() {
                 {scrapePreview && !toc && (
                     <div className="card" style={{ marginBottom: '2rem', animation: 'fadeIn 0.5s ease' }}>
                         <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <span style={{ fontSize: '1.5rem' }}>📋</span>
+                            <span style={{ fontSize: '1.5rem' }}>
+                                {scrapePreview.error ? '⚠️' : scrapePreview.warning ? '⚠️' : '📋'}
+                            </span>
                             Unit Details from training.gov.au
                         </h3>
 
                         {scrapePreview.error ? (
-                            <div style={{ padding: '1rem', background: '#fee', borderRadius: 'var(--radius)', color: '#c00' }}>
-                                ⚠️ {scrapePreview.error}
+                            <div style={{ padding: '1.5rem', background: '#fff3cd', borderRadius: 'var(--radius)', border: '1px solid #ffc107' }}>
+                                <div style={{ fontWeight: '600', color: '#856404', marginBottom: '0.5rem', fontSize: '1.1rem' }}>
+                                    ⚠️ {scrapePreview.error}
+                                </div>
+                                {scrapePreview.details && (
+                                    <div style={{ color: '#856404', fontSize: '0.9rem', marginBottom: '0.75rem' }}>
+                                        <strong>Details:</strong> {scrapePreview.details}
+                                    </div>
+                                )}
+                                {scrapePreview.suggestion && (
+                                    <div style={{ 
+                                        marginTop: '1rem', 
+                                        padding: '0.75rem', 
+                                        background: '#fff', 
+                                        borderRadius: 'var(--radius)',
+                                        borderLeft: '3px solid #ffc107'
+                                    }}>
+                                        <strong style={{ color: '#856404' }}>💡 Suggestion:</strong>
+                                        <p style={{ color: '#666', margin: '0.5rem 0 0 0' }}>{scrapePreview.suggestion}</p>
+                                    </div>
+                                )}
+                                {scrapePreview.fallbackAvailable && (
+                                    <button 
+                                        onClick={() => handleGenerate({ preventDefault: () => {} })}
+                                        className="btn"
+                                        style={{ marginTop: '1rem', background: 'var(--primary)', color: 'white' }}
+                                    >
+                                        Continue with Default Structure
+                                    </button>
+                                )}
                             </div>
                         ) : (
                             <>
+                                {scrapePreview.warning && (
+                                    <div style={{
+                                        padding: '0.75rem 1rem',
+                                        background: '#fff3cd',
+                                        borderRadius: 'var(--radius)',
+                                        color: '#856404',
+                                        fontSize: '0.875rem',
+                                        marginBottom: '1rem',
+                                        borderLeft: '3px solid #ffc107'
+                                    }}>
+                                        ⚠️ {scrapePreview.warning}
+                                    </div>
+                                )}
+                                
                                 <div style={{
                                     padding: '1rem',
                                     background: 'var(--input)',
@@ -409,12 +468,15 @@ export default function WorkbookPage() {
                                 <div style={{
                                     marginTop: '1rem',
                                     padding: '0.75rem 1rem',
-                                    background: '#e8f5e9',
+                                    background: scrapePreview.fallback ? '#fff3cd' : '#e8f5e9',
                                     borderRadius: 'var(--radius)',
-                                    color: '#2e7d32',
+                                    color: scrapePreview.fallback ? '#856404' : '#2e7d32',
                                     fontSize: '0.875rem'
                                 }}>
-                                    ✓ Ready to customize and generate workbook
+                                    {scrapePreview.fallback ? 
+                                        '⚠️ Using default structure - You can customize chapters before generating' :
+                                        '✓ Ready to customize and generate workbook'
+                                    }
                                 </div>
                             </>
                         )}
