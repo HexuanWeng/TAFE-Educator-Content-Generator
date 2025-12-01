@@ -4,6 +4,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import mammoth from 'mammoth';
 import fs from 'fs/promises';
 import path from 'path';
+import { generateWorkbook } from '@/data/prompts';
 
 export async function POST(request) {
     try {
@@ -46,40 +47,7 @@ export async function POST(request) {
             generationConfig: { responseMimeType: "application/json" }
         });
 
-        const prompt = `
-      You are an expert TAFE curriculum developer.
-      Create a comprehensive learner workbook for the unit: ${toc.title}.
-      
-      Structure the workbook exactly according to this Table of Contents:
-      ${JSON.stringify(toc.chapters)}
-      
-      ### Style and Tone Guide
-      Use the following text from an existing high - quality workbook as a reference for the required depth, tone, and formatting style:
-      ${exampleText.substring(0, 3000)}...[truncated for length]
-
-      ### Template Structure
-      Ensure the output follows the structural elements found in this template:
-      ${templateText.substring(0, 1000)}...[truncated for length]
-
-      For each chapter, provide detailed, educational content suitable for TAFE students.
-    Include:
-    - Clear explanations of concepts
-        - Practical examples relevant to the Australian industry
-            - Activities or checkpoints for understanding
-      
-      Output JSON structure:
-    {
-        "workbook": {
-            "title": "${toc.title}",
-                "chapters": [
-                    {
-                        "title": "Chapter Title",
-                        "content": "Full markdown content for the chapter..."
-                    }
-                ]
-        }
-    }
-`;
+        const prompt = generateWorkbook(toc, exampleText, templateText);
 
         const result = await model.generateContent(prompt);
         const response = await result.response;

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { generateImagePrompt } from '@/data/prompts';
 
 export async function POST(request) {
     try {
@@ -13,9 +14,7 @@ export async function POST(request) {
             if (!design.visualNotes) return null;
 
             // Clean up the prompt for better generation
-            const prompt = encodeURIComponent(
-                `professional educational illustration, ${design.visualNotes}, modern style, high quality, 4k`
-            );
+            const prompt = generateImagePrompt(design.visualNotes);
 
             // Use Pollinations.ai for free, instant AI image generation
             // Adding a random seed to ensure uniqueness if needed, though prompt variation is usually enough

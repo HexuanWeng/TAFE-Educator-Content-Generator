@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { generateFinalSlides } from '@/data/prompts';
 
 export async function POST(request) {
   try {
@@ -16,37 +17,7 @@ export async function POST(request) {
       generationConfig: { responseMimeType: "application/json" }
     });
 
-    const prompt = `
-      You are an expert TAFE educational content developer.
-      Your task is to take a slide outline and expand it into a professional, high-quality presentation.
-      
-      Input Slides:
-      ${JSON.stringify(slides)}
-
-      Instructions:
-      1. For each slide, keep the original title.
-      2. Expand the "points" into detailed, educational content. 
-         - Instead of brief bullets, write comprehensive sentences or short paragraphs that explain the concept clearly.
-         - Ensure the tone is professional, instructional, and suitable for adult learners (TAFE level).
-      3. Add "speakerNotes" for each slide. These should be detailed scripts or cues for the presenter to explain the slide content.
-      4. Refine the "infographic" description to be more specific and visually descriptive for a designer or AI image generator.
-
-      Output JSON structure:
-      {
-        "title": "${slides.title}",
-        "slides": [
-          {
-            "title": "Slide Title",
-            "content": [
-              "Detailed point 1...",
-              "Detailed point 2..."
-            ],
-            "speakerNotes": "Script for the presenter...",
-            "infographic": "Detailed visual description..."
-          }
-        ]
-      }
-    `;
+    const prompt = generateFinalSlides(slides);
 
     const result = await model.generateContent(prompt);
     const response = await result.response;

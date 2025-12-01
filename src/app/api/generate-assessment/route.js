@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { generateAssessment } from '@/data/prompts';
 
 export async function POST(request) {
     try {
@@ -20,28 +21,7 @@ export async function POST(request) {
             generationConfig: { responseMimeType: "application/json" }
         });
 
-        const prompt = `
-      You are an expert TAFE assessor.
-      Generate a comprehensive assessment for a TAFE unit.
-
-    Create:
-    1. 25 Multiple Choice Questions(MCQs) with 4 options each and 1 correct answer.
-      2. 30 Short Answer Questions with a model answer/marking guide for each.
-      
-      The questions should be suitable for a general Electrotechnology or Trade unit(as per the context of this app).
-      
-      Output JSON structure:
-{
-    "title": "Assessment Task",
-        "mcqs": [
-            { "question": "...", "options": ["A", "B", "C", "D"], "answer": "A" }
-        ],
-            "shortAnswer": [
-                { "question": "Question 1...", "answer": "Model answer..." },
-                { "question": "Question 2...", "answer": "Model answer..." }
-            ]
-}
-`;
+        const prompt = generateAssessment();
 
         const result = await model.generateContent(prompt);
         const response = await result.response;
