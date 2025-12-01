@@ -3,9 +3,23 @@ from pydantic import BaseModel
 import uvicorn
 import json
 import os
+from pathlib import Path
+from dotenv import load_dotenv
+import google.generativeai as genai
+
+# Load environment variables
+load_dotenv()
 
 # Initialize FastAPI app
 app = FastAPI(title="NotebookLM MCP Server Wrapper")
+
+# Configure Gemini AI
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
+    print(f"✓ Gemini AI configured")
+else:
+    print("⚠️  Warning: GEMINI_API_KEY not found. Document-based generation will use fallback.")
 
 class ToolCall(BaseModel):
     tool: str
@@ -34,35 +48,188 @@ async def handle_tool_call(call: ToolCall):
         raise HTTPException(status_code=404, detail=f"Tool '{call.tool}' not found")
 
 def generate_slides(topic: str, document_path: str, slide_count: int, theme: str):
-    # TODO: REAL IMPLEMENTATION with NotebookLM
-    # 1. Initialize NotebookLM client
-    # 2. Upload 'document_path'
-    # 3. Query for slides
-    
+    """
+    Generate slides from document content using Google Gemini AI
+    """
     print(f"Processing document at: {document_path}")
     
-    # Mock response
+    # Try to read document content
+    document_content = ""
+    if document_path and os.path.exists(document_path):
+        try:
+            # Read file content (supports text files, markdown, etc.)
+            with open(document_path, 'r', encoding='utf-8') as f:
+                document_content = f.read()
+            print(f"✓ Read {len(document_content)} characters from document")
+        except Exception as e:
+            print(f"⚠️  Could not read document: {e}")
+            document_content = ""
+    
+    # Use Gemini AI if available and we have content
+    if GEMINI_API_KEY and document_content:
+        try:
+            model = genai.GenerativeModel('gemini-pro')
+            
+            prompt = f"""You are an expert TAFE (Technical and Further Education) curriculum developer.
+
+Create a professional presentation with {slide_count} slides based on the following document content.
+
+**Document Content:**
+{document_content[:8000]}  # Limit to avoid token limits
+
+**Requirements:**
+1. Create exactly {slide_count} slides
+2. Each slide should have:
+   - A clear, descriptive title
+   - 3-4 key points (bullet points)
+   - A suggestion for an infographic/visual element
+3. Make it relevant for TAFE educators and students
+4. Focus on practical, actionable content
+5. Use professional educational tone
+
+**Output Format (JSON):**
+{{
+    "title": "{topic}",
+    "slides": [
+        {{
+            "title": "Slide title here",
+            "points": ["Point 1", "Point 2", "Point 3"],
+            "infographic": "Description of visual element"
+        }}
+    ]
+}}
+
+Return ONLY valid JSON, no additional text."""
+
+            response = model.generate_content(prompt)
+            result_text = response.text
+            
+            # Clean up response (remove markdown code blocks if present)
+            if result_text.startswith("```json"):
+                result_text = result_text[7:]
+            if result_text.startswith("```"):
+                result_text = result_text[3:]
+            if result_text.endswith("```"):
+                result_text = result_text[:-3]
+            result_text = result_text.strip()
+            
+            # Parse JSON response
+            slides_data = json.loads(result_text)
+            print(f"✓ Generated {len(slides_data.get('slides', []))} slides using AI")
+            return slides_data
+            
+        except Exception as e:
+            print(f"⚠️  AI generation failed: {e}")
+            print("Falling back to basic generation")
+    
+    # Fallback: Generate basic structure
+    print("Using fallback generation")
     slides = []
-    for i in range(1, slide_count + 1):
-        slides.append({
-            "title": f"Slide {i}: {topic}",
-            "points": [
-                f"Point 1 derived from {os.path.basename(document_path) if document_path else 'doc'}",
-                "Point 2: Analysis of key concepts",
-                "Point 3: Practical application in TAFE context"
-            ],
-            "infographic": "Visual representation of the topic"
-        })
+    
+    # If we have content, try to extract some info
+    if document_content:
+        # Split content into sections
+        lines = [l.strip() for l in document_content.split('\n') if l.strip()]
+        sections = lines[:slide_count * 3]  # Get some content for slides
+        
+        for i in range(1, min(slide_count + 1, len(sections) // 3 + 1)):
+            start_idx = (i - 1) * 3
+            slide_points = sections[start_idx:start_idx + 3] if start_idx < len(sections) else [
+                f"Key concept {i}.1",
+                f"Important detail {i}.2",
+                f"Practical application {i}.3"
+            ]
+            
+            slides.append({
+                "title": f"Slide {i}: {lines[start_idx] if start_idx < len(lines) else f'Section {i}'}",
+                "points": slide_points[:3],
+                "infographic": f"Visual representation for slide {i}"
+            })
+    else:
+        # No content available
+        for i in range(1, slide_count + 1):
+            slides.append({
+                "title": f"Slide {i}: {topic}",
+                "points": [
+                    f"Key concept {i}.1",
+                    f"Important detail {i}.2", 
+                    f"Practical application {i}.3"
+                ],
+                "infographic": f"Visual representation for slide {i}"
+            })
         
     return {"title": f"{topic} Presentation", "slides": slides}
 
 def generate_mindmap(topic: str, document_path: str):
-    # Mock response
+    """
+    Generate a mind map from document content using Google Gemini AI
+    """
+    print(f"Generating mind map for: {topic}")
+    
+    # Try to read document content
+    document_content = ""
+    if document_path and os.path.exists(document_path):
+        try:
+            with open(document_path, 'r', encoding='utf-8') as f:
+                document_content = f.read()
+            print(f"✓ Read {len(document_content)} characters from document")
+        except Exception as e:
+            print(f"⚠️  Could not read document: {e}")
+            document_content = ""
+    
+    # Use Gemini AI if available and we have content
+    if GEMINI_API_KEY and document_content:
+        try:
+            model = genai.GenerativeModel('gemini-pro')
+            
+            prompt = f"""Create a hierarchical mind map from this content about "{topic}".
+
+**Document Content:**
+{document_content[:5000]}
+
+**Requirements:**
+1. Identify 5-8 main concepts (level 1 nodes)
+2. For each main concept, identify 2-4 sub-concepts (level 2 nodes)
+3. Keep labels concise (2-5 words)
+
+**Output Format (JSON):**
+{{
+    "root": "{topic}",
+    "nodes": [
+        {{"id": "1", "label": "Concept name", "parent": "root"}},
+        {{"id": "1.1", "label": "Sub-concept", "parent": "1"}}
+    ]
+}}
+
+Return ONLY valid JSON."""
+
+            response = model.generate_content(prompt)
+            result_text = response.text.strip()
+            
+            # Clean markdown
+            if result_text.startswith("```json"):
+                result_text = result_text[7:]
+            if result_text.startswith("```"):
+                result_text = result_text[3:]
+            if result_text.endswith("```"):
+                result_text = result_text[:-3]
+            result_text = result_text.strip()
+            
+            mindmap_data = json.loads(result_text)
+            print(f"✓ Generated mind map with {len(mindmap_data.get('nodes', []))} nodes")
+            return mindmap_data
+            
+        except Exception as e:
+            print(f"⚠️  AI generation failed: {e}")
+            print("Falling back to basic mind map")
+    
+    # Fallback
     return {
         "root": topic,
         "nodes": [
-            {"id": "1", "label": "Concept A", "parent": "root"},
-            {"id": "2", "label": "Concept B", "parent": "root"}
+            {"id": "1", "label": "Main Concept A", "parent": "root"},
+            {"id": "2", "label": "Main Concept B", "parent": "root"},
+            {"id": "3", "label": "Main Concept C", "parent": "root"}
         ]
     }
 

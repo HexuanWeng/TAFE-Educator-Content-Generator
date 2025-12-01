@@ -26,14 +26,27 @@ fi
 echo ""
 echo "Checking dependencies..."
 
-if ! python3 -c "import fastapi" 2>/dev/null; then
-    echo "⚠️  FastAPI not found. Installing dependencies..."
+if ! python3 -c "import fastapi; import google.generativeai" 2>/dev/null; then
+    echo "⚠️  Dependencies not found. Installing..."
     cd mcp-server
     pip3 install -r requirements.txt
     cd ..
     echo "✓ Dependencies installed"
 else
     echo "✓ Dependencies already installed"
+fi
+
+# Check for .env file
+if [ ! -f "mcp-server/.env" ]; then
+    echo ""
+    echo "⚠️  Warning: mcp-server/.env not found"
+    if [ -f ".env.local" ]; then
+        echo "Creating mcp-server/.env from .env.local..."
+        grep "GEMINI_API_KEY" .env.local > mcp-server/.env
+        echo "✓ Created mcp-server/.env"
+    else
+        echo "Please create mcp-server/.env with your GEMINI_API_KEY"
+    fi
 fi
 
 # Start the server

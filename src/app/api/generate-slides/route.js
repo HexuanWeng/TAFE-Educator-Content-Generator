@@ -1,4 +1,7 @@
 import { NextResponse } from 'next/server';
+import fs from 'fs/promises';
+import path from 'path';
+import { writeFile } from 'fs/promises';
 
 const MCP_SERVER_URL = process.env.MCP_SERVER_URL || 'http://localhost:8001';
 
@@ -12,10 +15,40 @@ export async function POST(request) {
 
     // Process uploaded files (if any)
     let documentPath = null;
+    let documentContent = '';
+    
     if (files && files.length > 0) {
-      // In a full implementation, save the file temporarily
-      // For now, we'll pass metadata
-      documentPath = `/tmp/${files[0].name}`;
+      const file = files[0];
+      
+      // Create temp directory if it doesn't exist
+      const tempDir = path.join(process.cwd(), 'temp');
+      try {
+        await fs.mkdir(tempDir, { recursive: true });
+      } catch (err) {
+        console.log('Temp directory already exists');
+      }
+      
+      // Save file temporarily
+      documentPath = path.join(tempDir, `${Date.now()}-${file.name}`);
+      
+      try {
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        await writeFile(documentPath, buffer);
+        
+        // Try to read as text for logging
+        try {
+          documentContent = await file.text();
+          console.log(`✓ Saved file: ${file.name} (${documentContent.length} chars)`);
+        } catch {
+          console.log(`✓ Saved binary file: ${file.name}`);
+        }
+        
+        console.log(`✓ Document saved to: ${documentPath}`);
+      } catch (saveError) {
+        console.error('Error saving file:', saveError);
+        documentPath = null;
+      }
     }
 
     console.log('========================================');
@@ -49,6 +82,16 @@ export async function POST(request) {
     console.log('✅ Slides generated successfully via MCP server');
     console.log('Generated', slides.slides?.length || 0, 'slides');
     console.log('========================================');
+
+    // Clean up temporary file
+    if (documentPath) {
+      try {
+        await fs.unlink(documentPath);
+        console.log('✓ Cleaned up temporary file');
+      } catch (cleanupError) {
+        console.warn('Could not clean up temp file:', cleanupError.message);
+      }
+    }
 
     return NextResponse.json(slides);
 
