@@ -102,35 +102,64 @@ Traditional LLMs can't handle TAFE curriculum generation because:
 graph TD
     A[User: Enter Unit Code] --> B[Research Agent]
     B[Scrape training.gov.au] --> C[Planning Agent]
-    C[Generate TOC] --> D{Human Review}
+    C[Generate TOC] --> D{Human Review TOC}
     D -->|Approve| E[Writer Agent]
     D -->|Edit| C
     E[Generate Chapter 1] --> F[Generate Chapter 2]
     F --> G[Generate Chapter N]
     G --> H[Export Workbook]
+    
     H --> I[Assessment Agent]
-    I[Read Workbook] --> J[Generate Questions]
-    J --> K[Export Assessment]
-    H --> L[Presentation Agent]
-    L[Generate Slides] --> M[Export PowerPoint]
+    I[Read Workbook] --> J[Generate Questions: MCQ + Short Answer]
+    J --> K{Human Review Assessment}
+    K -->|Add Notes/Edit| K
+    K -->|Approve| L1[Export Teacher Version with Answers]
+    K -->|Approve| L2[Export Student Version Questions Only]
+    
+    H --> M[Presentation Agent]
+    M[Generate Initial Slides] --> N{Human Review Slides}
+    N -->|Edit/Add/Delete| N
+    N -->|Approve| O[Generate Speaker Notes & Transcript]
+    O --> P[Export Transcript]
+    P --> Q{Choose Theme}
+    Q[Select Design Theme] --> R[Generate Final Pack]
+    R --> S{Update Final Pack?}
+    S -->|Yes, Enhance Design| T[Design Enhancement Agent]
+    T --> R
+    S -->|No, Export| U[Export PowerPoint]
 ```
 
-### The Three Core Agents
+### The Core Agents
 
 1. **Research Agent** (Grounding)
    - Scrapes training.gov.au in real-time
    - Extracts Performance Criteria, Elements, and Knowledge Evidence
    - Builds context-specific knowledge base
 
-2. **Writer Agent** (Content Generation)
+2. **Planning Agent** (Strategic Planning)
+   - Generates structured Table of Contents
+   - Maps Performance Criteria to chapters
+   - Enables human-in-the-loop review
+
+3. **Writer Agent** (Content Generation)
    - Uses Retrieval Augmented Generation (RAG)
    - Generates chapters iteratively
    - Maintains Australian industry context
 
-3. **Assessment Agent** (Consistency)
+4. **Assessment Agent** (Consistency)
    - Ingests the generated workbook
    - Ensures questions map to learning material
    - Creates student and teacher versions
+
+5. **Presentation Agent** (Multi-Modal Output)
+   - Generates initial slide outlines
+   - Creates speaker notes and transcripts
+   - Supports iterative human refinement
+
+6. **Design Enhancement Agent** (Visual Polish)
+   - Applies professional themes
+   - Optimizes slide layouts
+   - Generates final presentation package
 
 ---
 
